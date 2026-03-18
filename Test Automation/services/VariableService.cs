@@ -303,7 +303,26 @@ namespace Test_Automation.Services
         public static bool TryGetPropertyByJsonPath(this JsonElement element, string jsonPath, out JsonElement value)
         {
             value = default;
-            var segments = jsonPath.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            // Handle JSONPath format - remove $ prefix if present
+            var path = jsonPath;
+            if (path.StartsWith("$."))
+            {
+                path = path.Substring(2);
+            }
+            else if (path == "$")
+            {
+                path = string.Empty;
+            }
+            
+            // If path is just $, return the root element
+            if (string.IsNullOrEmpty(path))
+            {
+                value = element;
+                return true;
+            }
+            
+            var segments = path.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
             var current = element;
 
             foreach (var segment in segments)

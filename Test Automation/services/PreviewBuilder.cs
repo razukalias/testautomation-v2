@@ -17,8 +17,10 @@ namespace Test_Automation.Services
         /// </summary>
         public void BuildAndAttachPreviewData(Component component, ExecutionResult result, ExecutionContext context)
         {
+            System.Diagnostics.Debug.WriteLine($"[PREVIEW] Building preview for component: {component.Name}, Type: {component.GetType().Name}");
             var previewData = CreatePreviewData(component, result, context);
             result.PreviewData = previewData;
+            System.Diagnostics.Debug.WriteLine($"[PREVIEW] Preview data built for: {component.Name}, Data Type: {result.Data?.GetType().Name ?? "null"}");
         }
 
         /// <summary>

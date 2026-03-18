@@ -42,6 +42,7 @@ namespace Test_Automation.Services
 
         public async Task<ExecutionResult> ExecuteComponent(Component component, ExecutionContext context)
         {
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] ExecuteComponent START: {component.Name} ({component.GetType().Name})");
             if (component == null)
             {
                 throw new ArgumentNullException(nameof(component));
@@ -64,6 +65,7 @@ namespace Test_Automation.Services
             };
 
             ComponentStarted?.Invoke(result);
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] About to execute: {component.Name}");
             TraceLog($"Execute start: {component.Name} ({component.GetType().Name})");
 
             var originalSettings = component.Settings;
@@ -90,13 +92,29 @@ namespace Test_Automation.Services
 
                 _variableService.ApplyVariableExtractors(component, context, componentData, TraceLog);
 
+                // Build and attach preview data BEFORE assertions so assertions can extract from preview
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] Building preview data before assertions for component: {component.Name}");
+                TraceLog($"[PREVIEW] Building preview data before assertions for component: {component.Name}");
+                _previewBuilder.BuildAndAttachPreviewData(component, result, context);
+
+                // Log current variables available for assertion extraction
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] Variables available for assertion extraction:");
+                foreach (var var in context.Variables)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG]   Variable: {var.Key} = {var.Value}");
+                    TraceLog($"[PREVIEW]   Variable: {var.Key} = {var.Value}");
+                }
+
                 var assertionResults = _assertionService.EvaluateAssertions(component, componentData, context, TraceLog);
                 result.AssertionResults = assertionResults;
                 result.AssertFailedCount = assertionResults.Count(item => !item.Passed && IsAssertMode(item.Mode));
                 result.ExpectFailedCount = assertionResults.Count(item => !item.Passed && !IsAssertMode(item.Mode));
                 result.AssertPassedCount = assertionResults.Count(item => item.Passed);
 
-                // Build and attach preview data
+                TraceLog($"[ASSERT] Assertion evaluation complete. Passed: {result.AssertPassedCount}, Failed: {result.AssertFailedCount}");
+
+                // Update preview data with assertion results (so assertion preview is included)
+                TraceLog($"[PREVIEW] Building preview data after assertions for component: {component.Name}");
                 _previewBuilder.BuildAndAttachPreviewData(component, result, context);
 
                 var stopRequestedByAssertion = assertionResults.Any(item => !item.Passed && IsStopOnAssertFailureMode(item.Mode));

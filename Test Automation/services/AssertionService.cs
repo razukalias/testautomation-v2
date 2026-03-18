@@ -48,14 +48,18 @@ namespace Test_Automation.Services
                 {
                     var varName = assertion.Source.Substring("Variable.".Length);
                     sourceValue = context.GetVariable(varName);
-                    trace($"Assertion source Variable.{varName} = {sourceValue}");
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Variable.{varName} = {sourceValue}");
+                    trace($"[ASSERT] Assertion source Variable.{varName} = {sourceValue}");
                 }
                 else if (assertion.Source.StartsWith("PreviewVariables.", StringComparison.OrdinalIgnoreCase))
                 {
                     // Handle PreviewVariables.varname - get specific variable from context
                     var varName = assertion.Source.Substring("PreviewVariables.".Length);
                     sourceValue = context.GetVariable(varName);
-                    trace($"Assertion source PreviewVariables.{varName} = {sourceValue}");
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] PreviewVariables.{varName} = {sourceValue}");
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Context has variable '{varName}': {context.HasVariable(varName)}");
+                    trace($"[ASSERT] Assertion source PreviewVariables.{varName} = {sourceValue}");
+                    trace($"[ASSERT] Checking context for variable '{varName}': {context.HasVariable(varName)}");
                 }
                 else if (string.Equals(assertion.Source, "PreviewVariables", StringComparison.OrdinalIgnoreCase))
                 {
@@ -66,11 +70,16 @@ namespace Test_Automation.Services
                         variables[key] = context.GetVariable(key) ?? string.Empty;
                     }
                     sourceValue = System.Text.Json.JsonSerializer.Serialize(variables);
-                    trace($"Assertion source PreviewVariables = {sourceValue}");
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] PreviewVariables JSON = {sourceValue}");
+                    trace($"[ASSERT] Assertion source PreviewVariables = {sourceValue}");
                 }
                 else
                 {
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Using GetSourceValue for source: {assertion.Source}");
+                    trace($"[ASSERT] Using GetSourceValue for source: {assertion.Source}");
                     sourceValue = GetSourceValue(assertion.Source, componentData);
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] GetSourceValue returned: {sourceValue}");
+                    trace($"[ASSERT] GetSourceValue returned: {sourceValue}");
                 }
                 
                 var actualValue = ExtractValue(sourceValue, assertion.JsonPath);
