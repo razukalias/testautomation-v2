@@ -117,6 +117,13 @@ namespace Test_Automation
             "Parallel"
         };
 
+        public ObservableCollection<ExecutionType> ExecutionTypeOptions { get; } = new ObservableCollection<ExecutionType>
+        {
+            ExecutionType.PreExecute,
+            ExecutionType.Normal,
+            ExecutionType.PostExecute
+        };
+
         public ObservableCollection<string> PreviewDataModeOptions { get; } = new ObservableCollection<string>
         {
             "Last Run",
@@ -578,6 +585,20 @@ namespace Test_Automation
         public bool IsAssertSelected => SelectedNode?.Type == "Assert";
         public bool IsVariableExtractorSelected => SelectedNode?.Type == "VariableExtractor";
         public bool IsScriptSelected => SelectedNode?.Type == "Script";
+        public bool IsTestPlanSelected => SelectedNode?.Type == "TestPlan";
+
+        public ExecutionType SelectedExecutionType
+        {
+            get => SelectedNode?.ExecutionType ?? ExecutionType.Normal;
+            set
+            {
+                if (SelectedNode != null && SelectedNode.Type == "TestPlan")
+                {
+                    SelectedNode.ExecutionType = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public IEnumerable<NodeSetting> ProjectVariablesForEditor =>
             SelectedNode?.Type == "Project"
@@ -2184,8 +2205,15 @@ namespace Test_Automation
                 return new List<PlanNode>();
             }
 
-            return projectNode.Children
+            // Get all enabled TestPlans
+            var testPlans = projectNode.Children
                 .Where(node => string.Equals(node.Type, "TestPlan", StringComparison.OrdinalIgnoreCase) && node.IsEnabled)
+                .ToList();
+
+            // Sort by ExecutionType: PreExecute first, then Normal, then PostExecute
+            // Within each type, maintain the original order
+            return testPlans
+                .OrderBy(node => node.ExecutionType == ExecutionType.PostExecute ? 2 : (node.ExecutionType == ExecutionType.Normal ? 1 : 0))
                 .ToList();
         }
 
@@ -2218,23 +2246,58 @@ namespace Test_Automation
         private async Task<List<(PlanNode Node, ExecutionSummary Summary)>> RunProjectPlansParallelAsync(
             IReadOnlyList<(PlanNode Node, Test_Automation.Componentes.TestPlan Component, Test_Automation.Models.ExecutionContext Context)> plans)
         {
-            var tasks = plans.Select(async plan =>
+            var summaries = new List<(PlanNode Node, ExecutionSummary Summary)>();
+
+            // Split plans by execution type
+            var preExecutePlans = plans.Where(p => p.Node.ExecutionType == ExecutionType.PreExecute).ToList();
+            var normalPlans = plans.Where(p => p.Node.ExecutionType == ExecutionType.Normal).ToList();
+            var postExecutePlans = plans.Where(p => p.Node.ExecutionType == ExecutionType.PostExecute).ToList();
+
+            // Step 1: Run PreExecute plans sequentially (in order)
+            foreach (var plan in preExecutePlans)
             {
+                if (plan.Context.StopToken.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException(plan.Context.StopToken);
+                }
                 var runner = new TestPlanRunner(CreateExecutorWithHighlight());
                 var summary = await runner.RunTestPlanWithContext(plan.Component, plan.Context);
-                return (plan.Node, Summary: summary, plan.Context);
-            });
-
-            var results = await Task.WhenAll(tasks);
-            if (results.Any(result => string.Equals(result.Context.Status, "stopped", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(result.Context.Status, "stopping", StringComparison.OrdinalIgnoreCase)))
-            {
-                throw new OperationCanceledException();
+                summaries.Add((plan.Node, summary));
             }
 
-            return results
-                .Select(result => (result.Node, result.Summary))
-                .ToList();
+            // Step 2: Run Normal plans in parallel
+            if (normalPlans.Count > 0)
+            {
+                var normalTasks = normalPlans.Select(async plan =>
+                {
+                    var runner = new TestPlanRunner(CreateExecutorWithHighlight());
+                    var summary = await runner.RunTestPlanWithContext(plan.Component, plan.Context);
+                    return (plan.Node, Summary: summary, plan.Context);
+                });
+
+                var normalResults = await Task.WhenAll(normalTasks);
+                if (normalResults.Any(result => string.Equals(result.Context.Status, "stopped", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(result.Context.Status, "stopping", StringComparison.OrdinalIgnoreCase)))
+                {
+                    throw new OperationCanceledException();
+                }
+
+                summaries.AddRange(normalResults.Select(r => (r.Node, r.Summary)));
+            }
+
+            // Step 3: Run PostExecute plans sequentially (in order)
+            foreach (var plan in postExecutePlans)
+            {
+                if (plan.Context.StopToken.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException(plan.Context.StopToken);
+                }
+                var runner = new TestPlanRunner(CreateExecutorWithHighlight());
+                var summary = await runner.RunTestPlanWithContext(plan.Component, plan.Context);
+                summaries.Add((plan.Node, summary));
+            }
+
+            return summaries;
         }
 
         private void PlanTreeView_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -6965,6 +7028,8 @@ namespace Test_Automation
             OnPropertyChanged(nameof(IsAssertSelected));
             OnPropertyChanged(nameof(IsVariableExtractorSelected));
             OnPropertyChanged(nameof(IsScriptSelected));
+            OnPropertyChanged(nameof(IsTestPlanSelected));
+            OnPropertyChanged(nameof(SelectedExecutionType));
             OnPropertyChanged(nameof(ProjectVariablesForEditor));
 
             OnPropertyChanged(nameof(ProjectDescription));

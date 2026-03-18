@@ -1292,6 +1292,24 @@
                         </StackPanel>
                     </Border>
 
+                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                            Visibility="{Binding IsTestPlanSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="TestPlan" FontWeight="SemiBold" Margin="0,0,0,6" />
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Execution Type" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding ExecutionTypeOptions}"
+                                          SelectedItem="{Binding SelectedExecutionType, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                            <TextBlock Text="PreExecute runs first, PostExecute runs last" Foreground="#666666" FontStyle="Italic" Margin="0,0,0,6" />
+                        </StackPanel>
+                    </Border>
+
                                         </StackPanel>
                                     </ScrollViewer>
                                 </TabItem>

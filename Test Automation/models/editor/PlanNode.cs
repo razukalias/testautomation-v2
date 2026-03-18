@@ -5,6 +5,13 @@ using System.Runtime.CompilerServices;
 
 namespace Test_Automation.Models.Editor
 {
+    public enum ExecutionType
+    {
+        PreExecute,
+        Normal,
+        PostExecute
+    }
+
     public class PlanNode : INotifyPropertyChanged
     {
         public string Id { get; }
@@ -17,6 +24,7 @@ namespace Test_Automation.Models.Editor
         private int _assertFailedCount;
         private int _expectFailedCount;
         private int _assertPassedCount;
+        private ExecutionType _executionType = ExecutionType.Normal;
 
         public string Name
         {
@@ -102,6 +110,17 @@ namespace Test_Automation.Models.Editor
                 OnPropertyChanged(nameof(AssertionSummaryLabel));
                 OnPropertyChanged(nameof(HasAssertionSummary));
                 OnPropertyChanged(nameof(AssertionSeverity));
+            }
+        }
+
+        public ExecutionType ExecutionType
+        {
+            get => _executionType;
+            set
+            {
+                if (_executionType == value) return;
+                _executionType = value;
+                OnPropertyChanged();
             }
         }
 
@@ -256,6 +275,7 @@ namespace Test_Automation.Models.Editor
             else if (type == "TestPlan")
             {
                 Settings.Add(new NodeSetting("Description", ""));
+                _executionType = ExecutionType.Normal;
             }
             else if (type == "Project")
             {

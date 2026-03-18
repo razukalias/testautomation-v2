@@ -50,6 +50,24 @@ namespace Test_Automation.Services
                     sourceValue = context.GetVariable(varName);
                     trace($"Assertion source Variable.{varName} = {sourceValue}");
                 }
+                else if (assertion.Source.StartsWith("PreviewVariables.", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Handle PreviewVariables.varname - get specific variable from context
+                    var varName = assertion.Source.Substring("PreviewVariables.".Length);
+                    sourceValue = context.GetVariable(varName);
+                    trace($"Assertion source PreviewVariables.{varName} = {sourceValue}");
+                }
+                else if (string.Equals(assertion.Source, "PreviewVariables", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Return all variables as JSON for PreviewVariables source
+                    var variables = new Dictionary<string, object>();
+                    foreach (var key in context.Variables.Keys)
+                    {
+                        variables[key] = context.GetVariable(key) ?? string.Empty;
+                    }
+                    sourceValue = System.Text.Json.JsonSerializer.Serialize(variables);
+                    trace($"Assertion source PreviewVariables = {sourceValue}");
+                }
                 else
                 {
                     sourceValue = GetSourceValue(assertion.Source, componentData);
@@ -121,6 +139,13 @@ namespace Test_Automation.Services
             if (source.StartsWith("Variable.", StringComparison.OrdinalIgnoreCase))
             {
                 return source; // Return the full source string to be resolved later
+            }
+
+            // Handle PreviewVariables - get all current variables from context
+            if (string.Equals(source, "PreviewVariables", StringComparison.OrdinalIgnoreCase))
+            {
+                // This will be handled in EvaluateAssertions where we have access to context
+                return source;
             }
 
             // Handle UI source names (PreviewResponse, PreviewRequest, etc.)
