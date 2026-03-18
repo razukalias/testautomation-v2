@@ -1387,7 +1387,12 @@
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBox Grid.Column="0" Margin="0,0,6,0" Text="{Binding VariableName, UpdateSourceTrigger=PropertyChanged}" />
+                                                    <ComboBox Grid.Column="0"
+                                                          Margin="0,0,6,0"
+                                                          ItemsSource="{Binding DataContext.AvailableVariablesForExtractor, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          IsEditable="True"
+                                                          IsTextSearchEnabled="True"
+                                                          Text="{Binding VariableName, UpdateSourceTrigger=PropertyChanged}" />
                                                     <TextBlock Grid.Column="1" VerticalAlignment="Center" Foreground="#666666">
                                                         <TextBlock.Text>
                                                             <MultiBinding Converter="{StaticResource VariableUsageLabelConverter}">
