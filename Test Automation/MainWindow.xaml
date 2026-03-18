@@ -1473,12 +1473,10 @@
                                                               Margin="0,0,6,0"
                                                               ItemsSource="{Binding DataContext.AssertionModeOptions, RelativeSource={RelativeSource AncestorType=Window}}"
                                                               SelectedItem="{Binding Mode, UpdateSourceTrigger=PropertyChanged}" />
-                                                    <ComboBox Grid.Column="1"
+                                                    <TextBlock Grid.Column="1"
                                                               Margin="0,0,6,0"
-                                                              ItemsSource="{Binding DataContext.ExtractorSourceOptions, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                              IsEditable="True"
-                                                              IsTextSearchEnabled="True"
-                                                              Text="{Binding Source, UpdateSourceTrigger=PropertyChanged}" />
+                                                              Text="PreviewVariables"
+                                                              VerticalAlignment="Center" />
                                                     <TextBox Grid.Column="2" Margin="0,0,6,0" Text="{Binding JsonPath, UpdateSourceTrigger=PropertyChanged}" />
                                                     <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="0,0,6,0">
                                                         <Button Width="32"
@@ -1576,11 +1574,11 @@
                                     <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,0,0,6">
                                         <TextBlock Text="Assertion Tree" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0" />
                                         <TextBlock Text="Source" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                        <ComboBox x:Name="AssertionTreeSourceComboBox"
-                                                  Width="180"
-                                                  Margin="0,0,6,0"
-                                                  ItemsSource="{Binding ExtractorSourceOptions}"
-                                                  SelectionChanged="AssertionTreeSourceComboBox_SelectionChanged" />
+                                        <TextBlock x:Name="AssertionTreeSourceLabel"
+                                                   Text="PreviewVariables"
+                                                   VerticalAlignment="Center"
+                                                   Width="180"
+                                                   Margin="0,0,6,0" />
                                         <Button Width="70" Content="Refresh" Click="RefreshAssertionTreeButton_Click" />
                                     </StackPanel>
 

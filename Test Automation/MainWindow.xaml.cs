@@ -1495,7 +1495,7 @@ namespace Test_Automation
         private Point _dragStartPoint;
         private PlanNode? _draggedNode;
         private bool _isSyncingAssertionTreeSource;
-        private string _assertionTreeSource = "PreviewResponse";
+        private string _assertionTreeSource = "PreviewVariables";
 
         private sealed class AssertionTreeNodeTag
         {
@@ -2099,14 +2099,29 @@ namespace Test_Automation
             }
 
             var contexts = runnablePlans.Select(_ => new Test_Automation.Models.ExecutionContext()).ToList();
+            
+            // Debug: Verify each context is unique
+            for (var i = 0; i < contexts.Count; i++)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] Context[{i}] created with ID: {contexts[i].ExecutionId}");
+            }
+            
             for (var i = 0; i < contexts.Count; i++)
             {
                 var context = contexts[i];
                 var testPlanNode = runnablePlans[i].Node;
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] Processing test plan '{testPlanNode.Name}' with context {context.ExecutionId}");
                 context.ResetStopRequest();
                 context.Status = "running";
                 ApplyProjectVariables(context);
                 ApplyTestPlanVariables(testPlanNode, context);
+                
+                // Debug: Verify the variable was set
+                var testVar = context.GetVariable("L");
+                if (testVar != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG] After ApplyTestPlanVariables, variable 'L' = '{testVar}' in context {context.ExecutionId}");
+                }
             }
 
             var mode = string.Equals(SelectedProjectRunMode, "Parallel", StringComparison.OrdinalIgnoreCase)
@@ -2490,6 +2505,7 @@ namespace Test_Automation
         private void ApplyTestPlanVariables(PlanNode testPlanNode, Test_Automation.Models.ExecutionContext context)
         {
             // Apply TestPlan local variables (these override project variables with the same name)
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] ApplyTestPlanVariables for '{testPlanNode.Name}' - applying {testPlanNode.Variables.Count} variables to context {context.ExecutionId}");
             foreach (var variable in testPlanNode.Variables)
             {
                 if (string.IsNullOrWhiteSpace(variable.Key))
@@ -2497,6 +2513,7 @@ namespace Test_Automation
                     continue;
                 }
 
+                System.Diagnostics.Debug.WriteLine($"[DEBUG]   Setting variable '{variable.Key}' = '{variable.Value}' in context {context.ExecutionId}");
                 context.SetVariable(variable.Key, variable.Value);
             }
         }
@@ -5802,41 +5819,65 @@ namespace Test_Automation
                 // Return variables from last execution as JSON
                 try
                 {
+                    // Use a HashSet to track unique variable names and avoid duplicates
+                    var uniqueVars = new LinkedList<KeyValuePair<string, string>>();
+                    var seenVars = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
                     // First try _lastExecutionContext.Variables
                     var context = _lastExecutionContext;
                     if (context?.Variables != null && context.Variables.Count > 0)
                     {
-                        var varsDict = context.Variables.ToDictionary(k => k.Key, v => v.Value?.ToString() ?? string.Empty);
-                        return System.Text.Json.JsonSerializer.Serialize(varsDict);
+                        foreach (var kvp in context.Variables)
+                        {
+                            if (!string.IsNullOrWhiteSpace(kvp.Key) && !seenVars.Contains(kvp.Key))
+                            {
+                                seenVars.Add(kvp.Key);
+                                uniqueVars.AddLast(new KeyValuePair<string, string>(kvp.Key, kvp.Value?.ToString() ?? string.Empty));
+                            }
+                        }
                     }
                     
-                    // Fallback to VariablesPreview property if available
+                    // Also check VariablesPreview property for additional unique variables
                     if (!string.IsNullOrEmpty(VariablesPreview) && !string.Equals(VariablesPreview, "{}", StringComparison.OrdinalIgnoreCase))
                     {
-                        return VariablesPreview;
+                        try
+                        {
+                            using var doc = JsonDocument.Parse(VariablesPreview);
+                            foreach (var prop in doc.RootElement.EnumerateObject())
+                            {
+                                if (!string.IsNullOrWhiteSpace(prop.Name) && !seenVars.Contains(prop.Name))
+                                {
+                                    seenVars.Add(prop.Name);
+                                    uniqueVars.AddLast(new KeyValuePair<string, string>(prop.Name, prop.Value.ToString()));
+                                }
+                            }
+                        }
+                        catch { }
                     }
                     
                     // Try to get variables from execution results' PreviewData.VariableExtractions
                     if (context?.Results != null)
                     {
-                        var allExtractions = new Dictionary<string, string>();
                         foreach (var result in context.Results)
                         {
                             if (result.PreviewData?.VariableExtractions != null)
                             {
                                 foreach (var extraction in result.PreviewData.VariableExtractions)
                                 {
-                                    if (!string.IsNullOrWhiteSpace(extraction.VariableName))
+                                    if (!string.IsNullOrWhiteSpace(extraction.VariableName) && !seenVars.Contains(extraction.VariableName))
                                     {
-                                        allExtractions[extraction.VariableName] = extraction.ExtractedValue;
+                                        seenVars.Add(extraction.VariableName);
+                                        uniqueVars.AddLast(new KeyValuePair<string, string>(extraction.VariableName, extraction.ExtractedValue));
                                     }
                                 }
                             }
                         }
-                        if (allExtractions.Count > 0)
-                        {
-                            return System.Text.Json.JsonSerializer.Serialize(allExtractions);
-                        }
+                    }
+
+                    if (uniqueVars.Count > 0)
+                    {
+                        var varsDict = uniqueVars.ToDictionary(k => k.Key, v => v.Value);
+                        return System.Text.Json.JsonSerializer.Serialize(varsDict);
                     }
                 }
                 catch
@@ -7407,7 +7448,7 @@ namespace Test_Automation
                 return;
             }
 
-            var defaultSource = ExtractorSourceOptions.FirstOrDefault() ?? "PreviewResponse";
+            var defaultSource = "PreviewVariables";
             SelectedNode.Assertions.Add(new AssertionRule(defaultSource, "$", "Equals", string.Empty, "Assert"));
             RefreshJsonPreview();
         }
@@ -7423,16 +7464,16 @@ namespace Test_Automation
             RefreshJsonPreview();
         }
 
-        private void AssertionTreeSourceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (_isSyncingAssertionTreeSource)
-            {
-                return;
-            }
+        //private void AssertionTreeSourceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        //{
+        //    if (_isSyncingAssertionTreeSource)
+        //    {
+        //        return;
+        //    }
 
-            _assertionTreeSource = AssertionTreeSourceComboBox?.SelectedItem as string ?? string.Empty;
-            RefreshAssertionJsonTreePanel();
-        }
+        //    _assertionTreeSource = AssertionTreeSourceComboBox?.SelectedItem as string ?? string.Empty;
+        //    RefreshAssertionJsonTreePanel();
+        //}
 
         private void RefreshAssertionTreeButton_Click(object sender, RoutedEventArgs e)
         {
@@ -7586,38 +7627,17 @@ namespace Test_Automation
         private void RefreshAssertionJsonTreePanel()
         {
             if (AssertionJsonTreeView == null
-                || AssertionTreeSourceComboBox == null
                 || AssertionTreeValuePreviewTextBox == null
                 || AssertionTreeSelectedPathTextBlock == null)
             {
                 return;
             }
 
+            // Always use PreviewVariables as the fixed source
+            _assertionTreeSource = "PreviewVariables";
+
+            // Clear existing items before rebuilding
             AssertionJsonTreeView.Items.Clear();
-            AssertionTreeSelectedPathTextBlock.Text = "Path: (none)";
-            AssertionTreeValuePreviewTextBox.Text = "Select a tree node to preview value.";
-
-            if (SelectedNode == null || string.Equals(SelectedNode.Type, "Project", StringComparison.OrdinalIgnoreCase))
-            {
-                AssertionTreeValuePreviewTextBox.Text = "Select a component node to use assertion tree.";
-                return;
-            }
-
-            var options = ExtractorSourceOptions.ToList();
-            if (options.Count == 0)
-            {
-                AssertionTreeValuePreviewTextBox.Text = "No assertion sources available.";
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(_assertionTreeSource) || !options.Contains(_assertionTreeSource))
-            {
-                _assertionTreeSource = options.First();
-            }
-
-            _isSyncingAssertionTreeSource = true;
-            AssertionTreeSourceComboBox.SelectedItem = _assertionTreeSource;
-            _isSyncingAssertionTreeSource = false;
 
             var sourceValue = ResolvePreviewSourceValue(_assertionTreeSource);
             if (string.IsNullOrWhiteSpace(sourceValue))
