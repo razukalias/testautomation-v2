@@ -1242,7 +1242,11 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Variable" />
-                                <TextBox Grid.Column="1" Text="{Binding ExtractorVariableName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0" />
+                                <ComboBox Grid.Column="1" 
+                                          ItemsSource="{Binding AvailableVariablesForExtractor}"
+                                          SelectedItem="{Binding ExtractorVariableName, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True"
+                                          Margin="0,0,6,0" />
                                 <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="#666666">
                                     <TextBlock.Text>
                                         <MultiBinding Converter="{StaticResource VariableUsageLabelConverter}">
@@ -1307,6 +1311,26 @@
                                           SelectedItem="{Binding SelectedExecutionType, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
                             <TextBlock Text="PreExecute runs first, PostExecute runs last" Foreground="#666666" FontStyle="Italic" Margin="0,0,0,6" />
+                            <TextBlock Text="Local Variables" FontWeight="SemiBold" Margin="0,10,0,6" />
+                            <ScrollViewer MinHeight="80" VerticalScrollBarVisibility="Auto" VerticalAlignment="Stretch">
+                                <ItemsControl ItemsSource="{Binding TestPlanVariablesForEditor}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,0,0,6">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox Grid.Column="0" Margin="0,0,6,0" Text="{Binding Key, UpdateSourceTrigger=LostFocus}" />
+                                                <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding Value, UpdateSourceTrigger=LostFocus}" />
+                                                <Button Grid.Column="2" Content="X" Width="26" Height="24" Click="RemoveTestPlanVariableButton_Click" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                            <Button Content="Add Variable" Width="100" Margin="0,6,0,0" Click="AddTestPlanVariableButton_Click" HorizontalAlignment="Left" />
                         </StackPanel>
                     </Border>
 

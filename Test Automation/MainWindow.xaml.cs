@@ -605,6 +605,11 @@ namespace Test_Automation
                 ? SelectedNode.Variables.Where(variable => !string.Equals(variable.Key, "env", StringComparison.OrdinalIgnoreCase))
                 : Enumerable.Empty<NodeSetting>();
 
+        public IEnumerable<NodeSetting> TestPlanVariablesForEditor =>
+            SelectedNode?.Type == "TestPlan"
+                ? SelectedNode.Variables
+                : Enumerable.Empty<NodeSetting>();
+
         public int VariableUsageVersion
         {
             get => _variableUsageVersion;
@@ -2024,6 +2029,7 @@ namespace Test_Automation
                 context.Status = "running";
                 SetRunState(true, context);
                 ApplyProjectVariables(context);
+                ApplyTestPlanVariables(testPlanNode, context);
                 var summary = await runner.RunTestPlanWithContext(testPlanComponent, context);
                 var endTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
                 PreviewLogs = string.Join("\n", new[]
@@ -2096,9 +2102,11 @@ namespace Test_Automation
             for (var i = 0; i < contexts.Count; i++)
             {
                 var context = contexts[i];
+                var testPlanNode = runnablePlans[i].Node;
                 context.ResetStopRequest();
                 context.Status = "running";
                 ApplyProjectVariables(context);
+                ApplyTestPlanVariables(testPlanNode, context);
             }
 
             var mode = string.Equals(SelectedProjectRunMode, "Parallel", StringComparison.OrdinalIgnoreCase)
@@ -2410,6 +2418,12 @@ namespace Test_Automation
                 context.Status = "running";
                 SetRunState(true, context);
                 ApplyProjectVariables(context);
+                // Apply TestPlan local variables if running from within a TestPlan
+                var parentTestPlan = FindParentTestPlan(selectedNode);
+                if (parentTestPlan != null)
+                {
+                    ApplyTestPlanVariables(parentTestPlan, context);
+                }
                 var result = await executor.ExecuteComponentTree(component, context);
                 context.Results.Add(result);
 
@@ -2471,6 +2485,76 @@ namespace Test_Automation
 
                 context.SetVariable(variable.Key, variable.Value);
             }
+        }
+
+        private void ApplyTestPlanVariables(PlanNode testPlanNode, Test_Automation.Models.ExecutionContext context)
+        {
+            // Apply TestPlan local variables (these override project variables with the same name)
+            foreach (var variable in testPlanNode.Variables)
+            {
+                if (string.IsNullOrWhiteSpace(variable.Key))
+                {
+                    continue;
+                }
+
+                context.SetVariable(variable.Key, variable.Value);
+            }
+        }
+
+        /// <summary>
+        /// Gets all available variables for dropdown selection (Project variables + TestPlan local variables)
+        /// </summary>
+        public ObservableCollection<string> AvailableVariablesForExtractor
+        {
+            get
+            {
+                var variables = new ObservableCollection<string>();
+                var projectNode = RootNodes.FirstOrDefault(node => node.Type == "Project");
+                if (projectNode != null)
+                {
+                    foreach (var v in projectNode.Variables)
+                    {
+                        if (!string.IsNullOrWhiteSpace(v.Key) && !variables.Contains(v.Key))
+                        {
+                            variables.Add(v.Key);
+                        }
+                    }
+                }
+
+                // Add TestPlan local variables if a TestPlan is selected
+                if (SelectedNode != null)
+                {
+                    // Check if selected node is a TestPlan or is inside a TestPlan
+                    var testPlanNode = FindParentTestPlan(SelectedNode);
+                    if (testPlanNode != null)
+                    {
+                        foreach (var v in testPlanNode.Variables)
+                        {
+                            if (!string.IsNullOrWhiteSpace(v.Key) && !variables.Contains(v.Key))
+                            {
+                                variables.Add(v.Key);
+                            }
+                        }
+                    }
+                }
+
+                return variables;
+            }
+        }
+
+        private PlanNode? FindParentTestPlan(PlanNode node)
+        {
+            if (node.Type == "TestPlan")
+            {
+                return node;
+            }
+
+            if (node.Parent != null)
+            {
+                return FindParentTestPlan(node.Parent);
+            }
+
+            return null;
         }
 
         private void RefreshEnvironmentOptions()
@@ -3049,6 +3133,30 @@ namespace Test_Automation
 
             SelectedNode.Variables.Remove(setting);
             RefreshJsonPreview();
+        }
+
+        private void AddTestPlanVariableButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SelectedNode == null || SelectedNode.Type != "TestPlan")
+            {
+                return;
+            }
+
+            SelectedNode.Variables.Add(new NodeSetting("var", "Value"));
+            OnPropertyChanged(nameof(TestPlanVariablesForEditor));
+            RebuildVariableUsageMap();
+        }
+
+        private void RemoveTestPlanVariableButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SelectedNode == null || SelectedNode.Type != "TestPlan" || sender is not Button button || button.DataContext is not NodeSetting setting)
+            {
+                return;
+            }
+
+            SelectedNode.Variables.Remove(setting);
+            OnPropertyChanged(nameof(TestPlanVariablesForEditor));
+            RebuildVariableUsageMap();
         }
 
         private void AddProjectUrlBaseButton_Click(object sender, RoutedEventArgs e)
@@ -7030,7 +7138,9 @@ namespace Test_Automation
             OnPropertyChanged(nameof(IsScriptSelected));
             OnPropertyChanged(nameof(IsTestPlanSelected));
             OnPropertyChanged(nameof(SelectedExecutionType));
+            OnPropertyChanged(nameof(AvailableVariablesForExtractor));
             OnPropertyChanged(nameof(ProjectVariablesForEditor));
+            OnPropertyChanged(nameof(TestPlanVariablesForEditor));
 
             OnPropertyChanged(nameof(ProjectDescription));
             OnPropertyChanged(nameof(ProjectEnvironment));
