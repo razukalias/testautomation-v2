@@ -2054,6 +2054,12 @@ namespace Test_Automation
                     { "projectVariables", projectVariables }
                 };
                 varsDict[testPlanNode.Name] = testPlanVars;
+                // Store hierarchical variables in context for assertion service
+                context.HierarchicalVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "projectVariables", projectVariables },
+                    { "testPlans", new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase) { { testPlanNode.Name, testPlanVars } } }
+                };
                 VariablesPreview = JsonSerializer.Serialize(varsDict, PrettyJsonOptions);
 
                 RefreshComponentPreview();
@@ -2216,6 +2222,12 @@ namespace Test_Automation
                     if (tpVars.Count > 0)
                         allTestPlanVars[plan.Name] = tpVars;
                 }
+                // Store hierarchical variables in context for assertion service to use
+                mergedExecutionContext.HierarchicalVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "projectVariables", projectVariables },
+                    { "testPlans", allTestPlanVars }
+                };
                 VariablesPreview = JsonSerializer.Serialize(new
                 {
                     projectVariables = projectVariables,
@@ -2493,12 +2505,20 @@ namespace Test_Automation
                 {
                     { "projectVariables", projectVariables }
                 };
+                var testPlansDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                 if (parentTestPlan != null)
                 {
                     var testPlanVars = BuildDictionaryWithOverwrite(parentTestPlan.Variables)
                         .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase);
                     varsDict[parentTestPlan.Name] = testPlanVars;
+                    testPlansDict[parentTestPlan.Name] = testPlanVars;
                 }
+                // Store hierarchical variables in context for assertion service
+                context.HierarchicalVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "projectVariables", projectVariables },
+                    { "testPlans", testPlansDict }
+                };
                 VariablesPreview = JsonSerializer.Serialize(varsDict, PrettyJsonOptions);
 
                 RefreshComponentPreview();
@@ -2797,6 +2817,13 @@ namespace Test_Automation
             }
 
             _lastExecutionContext = context;
+
+            // Store hierarchical variables in context for assertion service
+            context.HierarchicalVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "projectVariables", projectVariables },
+                { "testPlans", scopedTestPlanVariables }
+            };
 
             // Show only scoped variables
             VariablesPreview = JsonSerializer.Serialize(new

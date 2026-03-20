@@ -64,11 +64,8 @@ namespace Test_Automation.Services
                 else if (string.Equals(assertion.Source, "PreviewVariables", StringComparison.OrdinalIgnoreCase))
                 {
                     // Return all variables as JSON for PreviewVariables source
-                    var variables = new Dictionary<string, object>();
-                    foreach (var key in context.Variables.Keys)
-                    {
-                        variables[key] = context.GetVariable(key) ?? string.Empty;
-                    }
+                    // Use the hierarchical structure that matches the UI (includes projectVariables and testPlans paths)
+                    var variables = context.GetAllVariablesForPreview();
                     sourceValue = System.Text.Json.JsonSerializer.Serialize(variables);
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] PreviewVariables JSON = {sourceValue}");
                     trace($"[ASSERT] Assertion source PreviewVariables = {sourceValue}");

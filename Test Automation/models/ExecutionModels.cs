@@ -107,6 +107,84 @@ namespace Test_Automation.Models
             var normalizedKey = key?.Trim() ?? string.Empty;
             return !string.IsNullOrWhiteSpace(normalizedKey) && Variables.ContainsKey(normalizedKey);
         }
+
+        /// <summary>
+        /// Stores the hierarchical variable structure for PreviewVariables display/assertion.
+        /// This is built from node variables (project and testplan) and used for hierarchical access.
+        /// </summary>
+        private Dictionary<string, object>? _hierarchicalVariables;
+        public Dictionary<string, object>? HierarchicalVariables
+        {
+            get => _hierarchicalVariables;
+            set => _hierarchicalVariables = value;
+        }
+
+        /// <summary>
+        /// Gets variables for PreviewVariables - builds hierarchical structure similar to UI.
+        /// Returns a nested dictionary that can be properly serialized to JSON with nested objects.
+        /// </summary>
+        public Dictionary<string, object> GetAllVariablesForPreview()
+        {
+            var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+            // First, add all flat variables (backward compatibility)
+            foreach (var kvp in Variables)
+            {
+                result[kvp.Key] = kvp.Value ?? string.Empty;
+            }
+
+            // If we have stored hierarchical variables (from node definitions), merge them
+            if (_hierarchicalVariables != null)
+            {
+                // Add projectVariables as nested object
+                if (_hierarchicalVariables.TryGetValue("projectVariables", out var projVars) && projVars is Dictionary<string, object> projDict)
+                {
+                    // Create nested projectVariables object
+                    var projectVarsNested = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var kvp in projDict)
+                    {
+                        projectVarsNested[kvp.Key] = kvp.Value;
+                        // Also at top level for easier access (if not already exists)
+                        if (!result.ContainsKey(kvp.Key))
+                        {
+                            result[kvp.Key] = kvp.Value;
+                        }
+                    }
+                    result["projectVariables"] = projectVarsNested;
+                }
+
+                // Add testPlans as nested object
+                if (_hierarchicalVariables.TryGetValue("testPlans", out var tpVars) && tpVars is Dictionary<string, object> tpDict)
+                {
+                    var testPlansNested = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var planKvp in tpDict)
+                    {
+                        if (planKvp.Value is Dictionary<string, object> planVars)
+                        {
+                            // Create nested testPlan object with its variables
+                            var planVarsNested = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                            foreach (var varKvp in planVars)
+                            {
+                                planVarsNested[varKvp.Key] = varKvp.Value;
+                                // Also at top level if not exists
+                                if (!result.ContainsKey(varKvp.Key))
+                                {
+                                    result[varKvp.Key] = varKvp.Value;
+                                }
+                            }
+                            testPlansNested[planKvp.Key] = planVarsNested;
+                        }
+                        else
+                        {
+                            testPlansNested[planKvp.Key] = planKvp.Value;
+                        }
+                    }
+                    result["testPlans"] = testPlansNested;
+                }
+            }
+
+            return result;
+        }
     }
 
     /// <summary>
