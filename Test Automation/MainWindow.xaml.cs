@@ -2049,16 +2049,21 @@ namespace Test_Automation
                     : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                 var testPlanVars = BuildDictionaryWithOverwrite(testPlanNode.Variables)
                     .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase);
+                // Use consistent structure with "testPlans" wrapper
+                var testPlansDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { testPlanNode.Name, testPlanVars }
+                };
                 var varsDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
                 {
-                    { "projectVariables", projectVariables }
+                    { "projectVariables", projectVariables },
+                    { "testPlans", testPlansDict }
                 };
-                varsDict[testPlanNode.Name] = testPlanVars;
                 // Store hierarchical variables in context for assertion service
                 context.HierarchicalVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
                 {
                     { "projectVariables", projectVariables },
-                    { "testPlans", new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase) { { testPlanNode.Name, testPlanVars } } }
+                    { "testPlans", testPlansDict }
                 };
                 VariablesPreview = JsonSerializer.Serialize(varsDict, PrettyJsonOptions);
 
@@ -2135,7 +2140,10 @@ namespace Test_Automation
                 context.Status = "running";
                 ApplyProjectVariables(context);
                 ApplyTestPlanVariables(testPlanNode, context);
-                
+
+                // Set hierarchical variables for assertions
+                SetContextHierarchicalVariables(context, testPlanNode);
+
                 // Debug: Verify the variable was set
                 var testVar = context.GetVariable("L");
                 if (testVar != null)
@@ -2510,9 +2518,11 @@ namespace Test_Automation
                 {
                     var testPlanVars = BuildDictionaryWithOverwrite(parentTestPlan.Variables)
                         .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase);
-                    varsDict[parentTestPlan.Name] = testPlanVars;
+                    // Use consistent structure with "testPlans" wrapper
                     testPlansDict[parentTestPlan.Name] = testPlanVars;
                 }
+                // Use consistent structure with "testPlans" wrapper
+                varsDict["testPlans"] = testPlansDict;
                 // Store hierarchical variables in context for assertion service
                 context.HierarchicalVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -2584,6 +2594,34 @@ namespace Test_Automation
                 System.Diagnostics.Debug.WriteLine($"[DEBUG]   Setting variable '{variable.Key}' = '{variable.Value}' in context {context.ExecutionId}");
                 context.SetVariable(variable.Key, variable.Value);
             }
+        }
+
+        private void SetContextHierarchicalVariables(Test_Automation.Models.ExecutionContext context, PlanNode testPlanNode)
+        {
+            // Get project variables
+            var projectNode = RootNodes.FirstOrDefault(n => n.Type == "Project");
+            var projectVariables = projectNode != null
+                ? BuildDictionaryWithOverwrite(projectNode.Variables)
+                    .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+            // Get test plan variables
+            var testPlanVars = testPlanNode != null
+                ? BuildDictionaryWithOverwrite(testPlanNode.Variables)
+                    .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+            // Build hierarchical structure
+            var testPlansDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                { testPlanNode.Name, testPlanVars }
+            };
+
+            context.HierarchicalVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "projectVariables", projectVariables },
+                { "testPlans", testPlansDict }
+            };
         }
 
         /// <summary>
