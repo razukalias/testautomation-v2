@@ -32,6 +32,7 @@ namespace Test_Automation
 
         public ObservableCollection<PlanNode> RootNodes { get; } = new ObservableCollection<PlanNode>();
         public ObservableCollection<string> ExtractorSourceOptions { get; } = new ObservableCollection<string>();
+        public ObservableCollection<string> AssertionSourceOptions { get; } = new ObservableCollection<string>();
         private static readonly string[] BaseExtractorSources =
         {
             "PreviewRequest",
@@ -2040,7 +2041,20 @@ namespace Test_Automation
                 });
 
                 _lastExecutionContext = context;
-                VariablesPreview = JsonSerializer.Serialize(context.Variables, PrettyJsonOptions);
+                // Build hierarchical variable structure with only the executed testplan
+                var projectNode = RootNodes.FirstOrDefault(n => n.Type == "Project");
+                var projectVariables = projectNode != null
+                    ? BuildDictionaryWithOverwrite(projectNode.Variables)
+                        .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                var testPlanVars = BuildDictionaryWithOverwrite(testPlanNode.Variables)
+                    .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase);
+                var varsDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "projectVariables", projectVariables }
+                };
+                varsDict[testPlanNode.Name] = testPlanVars;
+                VariablesPreview = JsonSerializer.Serialize(varsDict, PrettyJsonOptions);
 
                 RefreshComponentPreview();
                 AppendRuntimeTraceBufferToPreviewLogs();
@@ -2188,7 +2202,25 @@ namespace Test_Automation
                 }
 
                 _lastExecutionContext = mergedExecutionContext;
-                VariablesPreview = JsonSerializer.Serialize(mergedVariables, PrettyJsonOptions);
+                // Build hierarchical variable structure with all testplans
+                var projectNode = RootNodes.FirstOrDefault(n => n.Type == "Project");
+                var projectVariables = projectNode != null
+                    ? BuildDictionaryWithOverwrite(projectNode.Variables)
+                        .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                var allTestPlanVars = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                foreach (var plan in testPlanNodes)
+                {
+                    var tpVars = BuildDictionaryWithOverwrite(plan.Variables)
+                        .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase);
+                    if (tpVars.Count > 0)
+                        allTestPlanVars[plan.Name] = tpVars;
+                }
+                VariablesPreview = JsonSerializer.Serialize(new
+                {
+                    projectVariables = projectVariables,
+                    testPlans = allTestPlanVars
+                }, PrettyJsonOptions);
 
                 RefreshComponentPreview();
                 AppendRuntimeTraceBufferToPreviewLogs();
@@ -2451,7 +2483,23 @@ namespace Test_Automation
                 });
 
                 _lastExecutionContext = context;
-                VariablesPreview = JsonSerializer.Serialize(context.Variables, PrettyJsonOptions);
+                // Build hierarchical variable structure
+                var projectNode = RootNodes.FirstOrDefault(n => n.Type == "Project");
+                var projectVariables = projectNode != null
+                    ? BuildDictionaryWithOverwrite(projectNode.Variables)
+                        .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                var varsDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "projectVariables", projectVariables }
+                };
+                if (parentTestPlan != null)
+                {
+                    var testPlanVars = BuildDictionaryWithOverwrite(parentTestPlan.Variables)
+                        .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase);
+                    varsDict[parentTestPlan.Name] = testPlanVars;
+                }
+                VariablesPreview = JsonSerializer.Serialize(varsDict, PrettyJsonOptions);
 
                 RefreshComponentPreview();
                 AppendRuntimeTraceBufferToPreviewLogs();
@@ -2714,17 +2762,48 @@ namespace Test_Automation
                 return;
             }
 
-            var variables = BuildDictionaryWithOverwrite(projectNode.Variables)
+            var projectVariables = BuildDictionaryWithOverwrite(projectNode.Variables)
                 .ToDictionary(entry => entry.Key, entry => (object)entry.Value, StringComparer.OrdinalIgnoreCase);
 
+            // Find the TestPlan ancestor for the selected component
+            PlanNode? testPlanNode = null;
+            var current = SelectedNode;
+            while (current != null)
+            {
+                if (string.Equals(current.Type, "TestPlan", StringComparison.OrdinalIgnoreCase))
+                {
+                    testPlanNode = current;
+                    break;
+                }
+                current = current.Parent;
+            }
+
+            // Collect only the TestPlan variables that are in scope
+            var scopedTestPlanVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            if (testPlanNode != null)
+            {
+                var tpVars = BuildDictionaryWithOverwrite(testPlanNode.Variables)
+                    .ToDictionary(entry => entry.Key, entry => (object)entry.Value, StringComparer.OrdinalIgnoreCase);
+                if (tpVars.Count > 0)
+                {
+                    scopedTestPlanVariables[testPlanNode.Name] = tpVars;
+                }
+            }
+
             var context = _lastExecutionContext ?? new Test_Automation.Models.ExecutionContext();
-            foreach (var entry in variables)
+            foreach (var entry in projectVariables)
             {
                 context.SetVariable(entry.Key, entry.Value);
             }
 
             _lastExecutionContext = context;
-            VariablesPreview = JsonSerializer.Serialize(variables, PrettyJsonOptions);
+
+            // Show only scoped variables
+            VariablesPreview = JsonSerializer.Serialize(new
+            {
+                projectVariables = projectVariables,
+                testPlans = scopedTestPlanVariables
+            }, PrettyJsonOptions);
         }
 
         private ComponentExecutor CreateExecutorWithHighlight()
@@ -3105,6 +3184,7 @@ namespace Test_Automation
         private void PlanTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
             SelectedNode = e.NewValue as PlanNode;
+            UpdateProjectVariablesPreview();
         }
 
         private void AddSettingButton_Click(object sender, RoutedEventArgs e)
@@ -4168,6 +4248,8 @@ namespace Test_Automation
 
         private void RefreshComponentPreview()
         {
+            RebuildAssertionSourceOptions();
+
             if (SelectedNode == null)
             {
                 PreviewRequest = "Select a component to see request preview.";
@@ -4981,13 +5063,25 @@ namespace Test_Automation
                 .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.OrdinalIgnoreCase)
                 ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
-            VariablesPreview = JsonSerializer.Serialize(new
+            // Build hierarchical variable structure for TestPlan scope
+            var testPlanVariables = BuildDictionaryWithOverwrite(testPlanNode.Variables)
+                .ToDictionary(entry => entry.Key, entry => (object)entry.Value, StringComparer.OrdinalIgnoreCase);
+
+            // Find parent Project node to get project variables
+            var parentProjectNode = testPlanNode.Parent;
+            var projectVariables = parentProjectNode != null
+                ? BuildDictionaryWithOverwrite(parentProjectNode.Variables)
+                    .ToDictionary(entry => entry.Key, entry => (object)entry.Value, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+            // Build dynamic structure with testplan name as key
+            var variablesDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             {
-                scope = "TestPlan",
-                id = testPlanNode.Id,
-                name = testPlanNode.Name,
-                runtime = runtimeVariables
-            }, PrettyJsonOptions);
+                { "projectVariables", projectVariables }
+            };
+            variablesDict[testPlanNode.Name] = testPlanVariables;
+
+            VariablesPreview = JsonSerializer.Serialize(variablesDict, PrettyJsonOptions);
 
             PreviewRequest = JsonSerializer.Serialize(new
             {
@@ -5305,17 +5399,25 @@ namespace Test_Automation
                 })
                 .ToList();
 
-            var runtimeVariables = _lastExecutionContext?.Variables
-                .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.OrdinalIgnoreCase)
-                ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-
             var projectVariables = BuildDictionaryWithOverwrite(projectNode.Variables)
                 .ToDictionary(entry => entry.Key, entry => (object)entry.Value, StringComparer.OrdinalIgnoreCase);
 
+            // Build hierarchical variable structure for Project scope - includes all TestPlan variables
+            var allTestPlanVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            foreach (var testPlan in testPlanNodes)
+            {
+                var tpVars = BuildDictionaryWithOverwrite(testPlan.Variables)
+                    .ToDictionary(entry => entry.Key, entry => (object)entry.Value, StringComparer.OrdinalIgnoreCase);
+                if (tpVars.Count > 0)
+                {
+                    allTestPlanVariables[testPlan.Name] = tpVars;
+                }
+            }
+
             VariablesPreview = JsonSerializer.Serialize(new
             {
-                project = projectVariables,
-                runtime = runtimeVariables
+                projectVariables = projectVariables,
+                testPlans = allTestPlanVariables
             }, PrettyJsonOptions);
 
             PreviewRequest = JsonSerializer.Serialize(new
@@ -7374,6 +7476,81 @@ namespace Test_Automation
             }
         }
 
+        /// <summary>
+        /// Rebuilds assertion source options filtered by testplan scope.
+        /// Only includes global variables (Project) + local variables from the TestPlan ancestor.
+        /// </summary>
+        private void RebuildAssertionSourceOptions()
+        {
+            AssertionSourceOptions.Clear();
+
+            // Add base sources
+            AssertionSourceOptions.Add("PreviewVariables");
+            AssertionSourceOptions.Add("PreviewRequest");
+            AssertionSourceOptions.Add("PreviewResponse");
+            AssertionSourceOptions.Add("PreviewLogs");
+
+            if (SelectedNode == null)
+            {
+                return;
+            }
+
+            // Find the TestPlan ancestor and Project
+            PlanNode? testPlanNode = null;
+            PlanNode? projectNode = null;
+            var current = SelectedNode;
+
+            while (current != null)
+            {
+                if (string.Equals(current.Type, "TestPlan", StringComparison.OrdinalIgnoreCase))
+                {
+                    testPlanNode = current;
+                }
+                else if (string.Equals(current.Type, "Project", StringComparison.OrdinalIgnoreCase))
+                {
+                    projectNode = current;
+                }
+                current = current.Parent;
+            }
+
+            // Collect variables: Project (global) + TestPlan (local)
+            var variables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Add global variables from Project
+            if (projectNode != null)
+            {
+                foreach (var variable in projectNode.Variables)
+                {
+                    if (!string.IsNullOrWhiteSpace(variable.Key))
+                    {
+                        variables.Add(variable.Key);
+                    }
+                }
+            }
+
+            // Add local variables from TestPlan
+            if (testPlanNode != null)
+            {
+                foreach (var variable in testPlanNode.Variables)
+                {
+                    if (!string.IsNullOrWhiteSpace(variable.Key))
+                    {
+                        variables.Add(variable.Key);
+                    }
+                }
+            }
+
+            // Add collected variables with "Variable." prefix
+            foreach (var varName in variables.OrderBy(v => v, StringComparer.OrdinalIgnoreCase))
+            {
+                var varSource = $"Variable.{varName}";
+                if (!AssertionSourceOptions.Contains(varSource))
+                {
+                    AssertionSourceOptions.Add(varSource);
+                }
+            }
+        }
+
         private void AddExtractorButton_Click(object sender, RoutedEventArgs e)
         {
             if (SelectedNode == null)
@@ -7477,6 +7654,12 @@ namespace Test_Automation
 
         private void RefreshAssertionTreeButton_Click(object sender, RoutedEventArgs e)
         {
+            RefreshAssertionJsonTreePanel();
+        }
+
+        private void AssertionSourceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // Refresh the JSON tree panel when assertion source changes
             RefreshAssertionJsonTreePanel();
         }
 

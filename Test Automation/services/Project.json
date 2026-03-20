@@ -1,0 +1,110 @@
+{
+  "Version": 1,
+  "Project": {
+    "Id": "52284f82-0d41-4ec2-8f77-4b787eeed4ca",
+    "Type": "Project",
+    "Name": "Project",
+    "Enabled": true,
+    "Settings": {
+      "Description": "",
+      "Environment": "dev",
+      "UrlCatalog": "[]"
+    },
+    "Variables": {
+      "env": "dev"
+    },
+    "Extractors": [],
+    "Assertions": [],
+    "Children": [
+      {
+        "Id": "20ccc361-ae84-419c-a97e-fc382c3efa80",
+        "Type": "TestPlan",
+        "Name": "A",
+        "Enabled": true,
+        "Settings": {
+          "Description": ""
+        },
+        "Variables": {
+          "A": "a"
+        },
+        "Extractors": [],
+        "Assertions": [],
+        "Children": [
+          {
+            "Id": "525591e9-0bff-4bb9-9ecf-7070dd389f64",
+            "Type": "Threads",
+            "Name": "Threads",
+            "Enabled": true,
+            "Settings": {
+              "ThreadCount": "1",
+              "RampUpSeconds": "1"
+            },
+            "Variables": {},
+            "Extractors": [],
+            "Assertions": [],
+            "Children": []
+          }
+        ]
+      },
+      {
+        "Id": "db2c7d4f-88da-43be-8bed-1ea42600279a",
+        "Type": "TestPlan",
+        "Name": "B",
+        "Enabled": true,
+        "Settings": {
+          "Description": ""
+        },
+        "Variables": {
+          "B": "b"
+        },
+        "Extractors": [
+          {
+            "Source": "PreviewResponse",
+            "JsonPath": "$.summary.assertionSummary",
+            "VariableName": "B"
+          }
+        ],
+        "Assertions": [],
+        "Children": [
+          {
+            "Id": "a2be2b51-c860-4dda-9ebc-a1f4fc2b3211",
+            "Type": "Threads",
+            "Name": "Threads",
+            "Enabled": true,
+            "Settings": {
+              "ThreadCount": "1",
+              "RampUpSeconds": "1"
+            },
+            "Variables": {},
+            "Extractors": [],
+            "Assertions": [],
+            "Children": [
+              {
+                "Id": "b2a1871b-4761-4b53-8e86-6c8499516862",
+                "Type": "Script",
+                "Name": "Script",
+                "Enabled": true,
+                "Settings": {
+                  "Language": "CSharp",
+                  "Code": ""
+                },
+                "Variables": {},
+                "Extractors": [],
+                "Assertions": [
+                  {
+                    "Mode": "Assert",
+                    "Source": "PreviewVariables",
+                    "JsonPath": "$.A",
+                    "Condition": "Equals",
+                    "Expected": "a"
+                  }
+                ],
+                "Children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -80,6 +80,7 @@ namespace Test_Automation.Models.Editor
                 _lastResultState = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(StatusLabel));
+                OnPropertyChanged(nameof(StatusMessage));
             }
         }
 
@@ -101,9 +102,9 @@ namespace Test_Automation.Models.Editor
             {
                 return LastResultState switch
                 {
-                    "passed" => "✔",
-                    "failed" => "✖",
-                    _ => "…"
+                    "Passed" => "✔",
+                    "NotRun" => "…",
+                    _ => "✖"
                 };
             }
         }
@@ -114,9 +115,9 @@ namespace Test_Automation.Models.Editor
             {
                 return LastResultState switch
                 {
-                    "passed" => "Passed",
-                    "failed" => $"Failed: {LastMessage}",
-                    _ => "Not run"
+                    "Passed" => "Passed",
+                    "NotRun" => "Not run",
+                    _ => string.IsNullOrEmpty(LastMessage) ? "Failed" : LastMessage
                 };
             }
         }

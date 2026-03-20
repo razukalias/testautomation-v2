@@ -1432,7 +1432,6 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="90" />
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="*" />
@@ -1440,11 +1439,10 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Mode" FontWeight="SemiBold" />
-                                <TextBlock Grid.Column="1" Text="Source" FontWeight="SemiBold" />
-                                <TextBlock Grid.Column="2" Text="JSON Path" FontWeight="SemiBold" />
-                                <TextBlock Grid.Column="4" Text="Condition" FontWeight="SemiBold" />
-                                <TextBlock Grid.Column="5" Text="Expected" FontWeight="SemiBold" />
-                                <TextBlock Grid.Column="6" Text="Status" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="1" Text="JSON Path" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="3" Text="Condition" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="4" Text="Expected" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="5" Text="Status" FontWeight="SemiBold" />
                             </Grid>
 
                             <Grid MinHeight="260" Margin="0,0,0,0">
@@ -1462,7 +1460,6 @@
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="90" />
                                                         <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="*" />
@@ -1473,29 +1470,12 @@
                                                               Margin="0,0,6,0"
                                                               ItemsSource="{Binding DataContext.AssertionModeOptions, RelativeSource={RelativeSource AncestorType=Window}}"
                                                               SelectedItem="{Binding Mode, UpdateSourceTrigger=PropertyChanged}" />
-                                                    <TextBlock Grid.Column="1"
-                                                              Margin="0,0,6,0"
-                                                              Text="PreviewVariables"
-                                                              VerticalAlignment="Center" />
-                                                    <TextBox Grid.Column="2" Margin="0,0,6,0" Text="{Binding JsonPath, UpdateSourceTrigger=PropertyChanged}" />
-                                                    <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="0,0,6,0">
-                                                        <Button Width="32"
-                                                                Height="24"
-                                                                Margin="0,0,4,0"
-                                                                Content="..."
-                                                                ToolTip="Explore JSON paths"
-                                                                Click="ExploreJsonPathButton_Click" />
-                                                        <Button Width="40"
-                                                                Height="24"
-                                                                Content="Tree"
-                                                                ToolTip="Pick JSON node for assertion expected value"
-                                                                Click="ExploreAssertionExpectedJsonButton_Click" />
-                                                    </StackPanel>
-                                                    <ComboBox Grid.Column="4"
+                                                    <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding JsonPath, UpdateSourceTrigger=PropertyChanged}" />
+                                                    <ComboBox Grid.Column="3"
                                                               Margin="0,0,6,0"
                                                               ItemsSource="{Binding DataContext.AssertionConditionOptions, RelativeSource={RelativeSource AncestorType=Window}}"
                                                               SelectedItem="{Binding Condition, UpdateSourceTrigger=PropertyChanged}" />
-                                                    <TextBox Grid.Column="5"
+                                                    <TextBox Grid.Column="4"
                                                              Margin="0,0,6,0"
                                                              Text="{Binding Expected, UpdateSourceTrigger=PropertyChanged}"
                                                              PreviewMouseLeftButtonDown="AssertionExpectedTextBox_PreviewMouseLeftButtonDown">
@@ -1519,7 +1499,7 @@
                                                             </Style>
                                                         </TextBox.Style>
                                                     </TextBox>
-                                                    <Border Grid.Column="6" Margin="0,0,6,0" CornerRadius="3" Padding="6,2" BorderBrush="#D1D5DB" BorderThickness="1">
+                                                    <Border Grid.Column="5" Margin="0,0,6,0" CornerRadius="3" Padding="6,2" BorderBrush="#D1D5DB" BorderThickness="1">
                                                         <TextBlock Text="{Binding StatusLabel}" ToolTip="{Binding StatusMessage}" HorizontalAlignment="Center">
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
