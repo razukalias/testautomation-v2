@@ -7822,7 +7822,8 @@ namespace Test_Automation
             // Clear existing items before rebuilding
             AssertionJsonTreeView.Items.Clear();
 
-            var sourceValue = ResolvePreviewSourceValue(_assertionTreeSource);
+            // Use VariablesPreview directly to match exactly what's shown in the preview Variables tab
+            var sourceValue = VariablesPreview;
             if (string.IsNullOrWhiteSpace(sourceValue))
             {
                 AssertionTreeValuePreviewTextBox.Text = "Source has no data yet. Run or preview component first.";
