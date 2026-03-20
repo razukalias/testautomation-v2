@@ -3185,6 +3185,7 @@ namespace Test_Automation
         {
             SelectedNode = e.NewValue as PlanNode;
             UpdateProjectVariablesPreview();
+            RefreshJsonPreview();
         }
 
         private void AddSettingButton_Click(object sender, RoutedEventArgs e)
