@@ -26,7 +26,7 @@ namespace Test_Automation.Services
 
         public event Action<ExecutionResult>? ComponentStarted;
         public event Action<ExecutionResult>? ComponentCompleted;
-        public event Action<string>? Trace;
+        public event Action<TraceEventArgs>? Trace;
 
         public ComponentExecutor()
             : this(new VariableService(), new AssertionService(), new ConditionService())
@@ -66,7 +66,7 @@ namespace Test_Automation.Services
 
             ComponentStarted?.Invoke(result);
             System.Diagnostics.Debug.WriteLine($"[DEBUG] About to execute: {component.Name}");
-            TraceLog($"Execute start: {component.Name} ({component.GetType().Name})");
+            TraceLog(component, result, $"Execute start: {component.Name} ({component.GetType().Name})");
 
             var originalSettings = component.Settings;
             var originalExtractors = component.Extractors;
@@ -90,11 +90,11 @@ namespace Test_Automation.Services
                     componentData.Properties["threadGroupId"] = result.ThreadGroupId;
                 }
 
-                _variableService.ApplyVariableExtractors(component, context, componentData, TraceLog);
+                _variableService.ApplyVariableExtractors(component, context, componentData, msg => TraceLog(component, result, msg));
 
                 // Build and attach preview data BEFORE assertions so assertions can extract from preview
                 System.Diagnostics.Debug.WriteLine($"[DEBUG] Building preview data before assertions for component: {component.Name}");
-                TraceLog($"[PREVIEW] Building preview data before assertions for component: {component.Name}");
+                TraceLog(component, result, $"[PREVIEW] Building preview data before assertions for component: {component.Name}");
                 _previewBuilder.BuildAndAttachPreviewData(component, result, context);
 
                 // Log current variables available for assertion extraction
@@ -102,19 +102,19 @@ namespace Test_Automation.Services
                 foreach (var var in context.Variables)
                 {
                     System.Diagnostics.Debug.WriteLine($"[DEBUG]   Variable: {var.Key} = {var.Value}");
-                    TraceLog($"[PREVIEW]   Variable: {var.Key} = {var.Value}");
+                    TraceLog(component, result, $"[PREVIEW]   Variable: {var.Key} = {var.Value}");
                 }
 
-                var assertionResults = await _assertionService.EvaluateAssertionsAsync(component, componentData, context, TraceLog);
+                var assertionResults = await _assertionService.EvaluateAssertionsAsync(component, componentData, context, msg => TraceLog(component, result, msg));
                 result.AssertionResults = assertionResults;
                 result.AssertFailedCount = assertionResults.Count(item => !item.Passed && IsAssertMode(item.Mode));
                 result.ExpectFailedCount = assertionResults.Count(item => !item.Passed && !IsAssertMode(item.Mode));
                 result.AssertPassedCount = assertionResults.Count(item => item.Passed);
 
-                TraceLog($"[ASSERT] Assertion evaluation complete. Passed: {result.AssertPassedCount}, Failed: {result.AssertFailedCount}");
+                TraceLog(component, result, $"[ASSERT] Assertion evaluation complete. Passed: {result.AssertPassedCount}, Failed: {result.AssertFailedCount}");
 
                 // Update preview data with assertion results (so assertion preview is included)
-                TraceLog($"[PREVIEW] Building preview data after assertions for component: {component.Name}");
+                TraceLog(component, result, $"[PREVIEW] Building preview data after assertions for component: {component.Name}");
                 _previewBuilder.BuildAndAttachPreviewData(component, result, context);
 
                 var stopRequestedByAssertion = assertionResults.Any(item => !item.Passed && IsStopOnAssertFailureMode(item.Mode));
@@ -153,7 +153,7 @@ namespace Test_Automation.Services
                 component.Extractors = originalExtractors ?? new List<VariableExtractionRule>();
                 component.Assertions = originalAssertions ?? new List<AssertionRule>();
                 ComponentCompleted?.Invoke(result);
-                TraceLog($"Execute end: {component.Name} status={result.Status} durationMs={result.DurationMs}");
+                TraceLog(component, result, $"Execute end: {component.Name} status={result.Status} durationMs={result.DurationMs}");
             }
 
             return result;
@@ -292,15 +292,15 @@ namespace Test_Automation.Services
             var sourceVariable = foreachComponent.Settings.TryGetValue("SourceVariable", out var source) ? source : string.Empty;
             var outputVariable = foreachComponent.Settings.TryGetValue("OutputVariable", out var output) ? output?.Trim() : string.Empty;
             
-            TraceLog($"Foreach '{foreachComponent.Name}': SourceVariable='{sourceVariable}', OutputVariable='{outputVariable}'");
+            TraceLog(foreachComponent, result, $"Foreach '{foreachComponent.Name}': SourceVariable='{sourceVariable}', OutputVariable='{outputVariable}'");
             
             // Check if the variable exists
             var variableValue = context.GetVariable(sourceVariable);
-            TraceLog($"Foreach '{foreachComponent.Name}': Variable '{sourceVariable}' value type: {variableValue?.GetType().Name ?? "null"}, value preview: {(variableValue?.ToString()?.Substring(0, Math.Min(100, variableValue?.ToString()?.Length ?? 0)) ?? "null")}");
+            TraceLog(foreachComponent, result, $"Foreach '{foreachComponent.Name}': Variable '{sourceVariable}' value type: {variableValue?.GetType().Name ?? "null"}, value preview: {(variableValue?.ToString()?.Substring(0, Math.Min(100, variableValue?.ToString()?.Length ?? 0)) ?? "null")}");
             
             var items = ResolveCollection(context, sourceVariable).ToList();
             
-            TraceLog($"Foreach '{foreachComponent.Name}': Resolved {items.Count} items from '{sourceVariable}'");
+            TraceLog(foreachComponent, result, $"Foreach '{foreachComponent.Name}': Resolved {items.Count} items from '{sourceVariable}'");
 
             var foreachData = result.Data as ForeachData;
             if (foreachData != null)
@@ -439,9 +439,23 @@ namespace Test_Automation.Services
             return new[] { value };
         }
 
-        private void TraceLog(string message)
+        private void TraceLog(Component component, ExecutionResult result, string message, TraceLevel level = TraceLevel.Info)
         {
-            Trace?.Invoke(message);
+            var args = new TraceEventArgs
+            {
+                ComponentId = component?.Id ?? string.Empty,
+                Message = message,
+                Level = level,
+                Timestamp = DateTime.UtcNow
+            };
+            if (result != null)
+            {
+                lock (result.Logs)
+                {
+                    result.Logs.Add(args);
+                }
+            }
+            Trace?.Invoke(args);
         }
 
         private static void ThrowIfStopped(ExecutionContext context, string scope)

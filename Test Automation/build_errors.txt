@@ -1,0 +1,23 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+C:\Users\Razzouk\source\repos\Test Automation\Test Automation\MainWindow.xaml.cs(2039,13): error CS0103: The name '_runtimeTraceLogBuffer' does not exist in the current context [C:\Users\Razzouk\source\repos\Test Automation\Test Automation\Test Automation_4stgewsk_wpftmp.csproj]
+C:\Users\Razzouk\source\repos\Test Automation\Test Automation\MainWindow.xaml.cs(2176,13): error CS0103: The name '_runtimeTraceLogBuffer' does not exist in the current context [C:\Users\Razzouk\source\repos\Test Automation\Test Automation\Test Automation_4stgewsk_wpftmp.csproj]
+C:\Users\Razzouk\source\repos\Test Automation\Test Automation\MainWindow.xaml.cs(2494,13): error CS0103: The name '_runtimeTraceLogBuffer' does not exist in the current context [C:\Users\Razzouk\source\repos\Test Automation\Test Automation\Test Automation_4stgewsk_wpftmp.csproj]
+C:\Users\Razzouk\source\repos\Test Automation\Test Automation\MainWindow.xaml.cs(2634,19): warning CS8602: Dereference of a possibly null reference. [C:\Users\Razzouk\source\repos\Test Automation\Test Automation\Test Automation_4stgewsk_wpftmp.csproj]
+C:\Users\Razzouk\source\repos\Test Automation\Test Automation\MainWindow.xaml.cs(5891,13): error CS0103: The name '_runtimeTraceLogBuffer' does not exist in the current context [C:\Users\Razzouk\source\repos\Test Automation\Test Automation\Test Automation_4stgewsk_wpftmp.csproj]
+C:\Users\Razzouk\source\repos\Test Automation\Test Automation\MainWindow.xaml.cs(1500,22): warning CS0169: The field 'MainWindow._isSyncingAssertionTreeSource' is never used [C:\Users\Razzouk\source\repos\Test Automation\Test Automation\Test Automation_4stgewsk_wpftmp.csproj]
+
+Build FAILED.
+
+C:\Users\Razzouk\source\repos\Test Automation\Test Automation\MainWindow.xaml.cs(2634,19): warning CS8602: Dereference of a possibly null reference. [C:\Users\Razzouk\source\repos\Test Automation\Test Automation\Test Automation_4stgewsk_wpftmp.csproj]
+C:\Users\Razzouk\source\repos\Test Automation\Test Automation\MainWindow.xaml.cs(1500,22): warning CS0169: The field 'MainWindow._isSyncingAssertionTreeSource' is never used [C:\Users\Razzouk\source\repos\Test Automation\Test Automation\Test Automation_4stgewsk_wpftmp.csproj]
+C:\Users\Razzouk\source\repos\Test Automation\Test Automation\MainWindow.xaml.cs(2039,13): error CS0103: The name '_runtimeTraceLogBuffer' does not exist in the current context [C:\Users\Razzouk\source\repos\Test Automation\Test Automation\Test Automation_4stgewsk_wpftmp.csproj]
+C:\Users\Razzouk\source\repos\Test Automation\Test Automation\MainWindow.xaml.cs(2176,13): error CS0103: The name '_runtimeTraceLogBuffer' does not exist in the current context [C:\Users\Razzouk\source\repos\Test Automation\Test Automation\Test Automation_4stgewsk_wpftmp.csproj]
+C:\Users\Razzouk\source\repos\Test Automation\Test Automation\MainWindow.xaml.cs(2494,13): error CS0103: The name '_runtimeTraceLogBuffer' does not exist in the current context [C:\Users\Razzouk\source\repos\Test Automation\Test Automation\Test Automation_4stgewsk_wpftmp.csproj]
+C:\Users\Razzouk\source\repos\Test Automation\Test Automation\MainWindow.xaml.cs(5891,13): error CS0103: The name '_runtimeTraceLogBuffer' does not exist in the current context [C:\Users\Razzouk\source\repos\Test Automation\Test Automation\Test Automation_4stgewsk_wpftmp.csproj]
+    2 Warning(s)
+    4 Error(s)
+
+Time Elapsed 00:00:02.25
+
+Workload updates are available. Run `dotnet workload list` for more information.

@@ -303,39 +303,164 @@ namespace Test_Automation.Services
         public static bool TryGetPropertyByJsonPath(this JsonElement element, string jsonPath, out JsonElement value)
         {
             value = default;
-            
-            // Handle JSONPath format - remove $ prefix if present
-            var path = jsonPath;
+
+            // Normalize: strip leading $. or $
+            var path = jsonPath?.Trim() ?? string.Empty;
             if (path.StartsWith("$."))
-            {
                 path = path.Substring(2);
-            }
             else if (path == "$")
-            {
                 path = string.Empty;
-            }
-            
-            // If path is just $, return the root element
+
+            // Root selector
             if (string.IsNullOrEmpty(path))
             {
                 value = element;
                 return true;
             }
-            
-            var segments = path.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-            var current = element;
 
-            foreach (var segment in segments)
+            // Tokenize the path into segments, splitting on '.' while respecting bracket notation.
+            // e.g. "dataset[0].name" → ["dataset[0]", "name"]
+            //      "[0].name"        → ["[0]", "name"]
+            var tokens = TokenizePath(path);
+            JsonElement current = element;
+
+            foreach (var token in tokens)
             {
-                if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(segment, out var next))
+                // If the current value is a JSON string that itself contains JSON, parse it first
+                // so that "$.dataset[0].name" works when dataset is stored as a string variable.
+                if (current.ValueKind == JsonValueKind.String)
                 {
-                    return false;
+                    var raw = current.GetString();
+                    if (raw != null && (raw.TrimStart().StartsWith("[") || raw.TrimStart().StartsWith("{")))
+                    {
+                        try
+                        {
+                            // We need to keep the parsed document alive; clone the root element.
+                            using var innerDoc = JsonDocument.Parse(raw);
+                            current = innerDoc.RootElement.Clone();
+                        }
+                        catch (JsonException)
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
-                current = next;
+
+                if (token.StartsWith("[") && token.EndsWith("]"))
+                {
+                    // Array index: [0], [1], ...
+                    var indexStr = token.Substring(1, token.Length - 2);
+                    if (!int.TryParse(indexStr, out var idx))
+                        return false;
+                    if (current.ValueKind != JsonValueKind.Array)
+                        return false;
+                    var arr = current.EnumerateArray().ToList();
+                    if (idx < 0 || idx >= arr.Count)
+                        return false;
+                    current = arr[idx];
+                }
+                else
+                {
+                    // Property name, potentially with trailing bracket(s): e.g. "dataset[0]"
+                    var bracketIdx = token.IndexOf('[');
+                    if (bracketIdx >= 0)
+                    {
+                        // Split into property part and bracket part(s)
+                        var propName = token.Substring(0, bracketIdx);
+                        var bracketPart = token.Substring(bracketIdx); // e.g. "[0]"
+
+                        if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(propName, out var propElement))
+                            return false;
+                        current = propElement;
+
+                        // Now handle the bracket part via recursion-like approach
+                        // Parse inner index
+                        var innerTokens = TokenizeBrackets(bracketPart);
+                        foreach (var innerToken in innerTokens)
+                        {
+                            // Unwrap embedded JSON string if needed
+                            if (current.ValueKind == JsonValueKind.String)
+                            {
+                                var raw = current.GetString();
+                                if (raw != null && (raw.TrimStart().StartsWith("[") || raw.TrimStart().StartsWith("{")))
+                                {
+                                    try
+                                    {
+                                        using var innerDoc = JsonDocument.Parse(raw);
+                                        current = innerDoc.RootElement.Clone();
+                                    }
+                                    catch (JsonException) { return false; }
+                                }
+                                else { return false; }
+                            }
+
+                            if (innerToken.StartsWith("[") && innerToken.EndsWith("]"))
+                            {
+                                var indexStr = innerToken.Substring(1, innerToken.Length - 2);
+                                if (!int.TryParse(indexStr, out var idx)) return false;
+                                if (current.ValueKind != JsonValueKind.Array) return false;
+                                var arr = current.EnumerateArray().ToList();
+                                if (idx < 0 || idx >= arr.Count) return false;
+                                current = arr[idx];
+                            }
+                            else { return false; }
+                        }
+                    }
+                    else
+                    {
+                        // Plain property name
+                        if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(token, out var next))
+                            return false;
+                        current = next;
+                    }
+                }
             }
 
             value = current;
             return true;
+        }
+
+        /// <summary>Splits a dot-separated path into tokens, keeping bracket groups intact.</summary>
+        private static List<string> TokenizePath(string path)
+        {
+            var tokens = new List<string>();
+            var sb = new System.Text.StringBuilder();
+            int depth = 0;
+
+            foreach (var ch in path)
+            {
+                if (ch == '[') depth++;
+                if (ch == ']') depth--;
+
+                if (ch == '.' && depth == 0)
+                {
+                    if (sb.Length > 0) { tokens.Add(sb.ToString()); sb.Clear(); }
+                }
+                else
+                {
+                    sb.Append(ch);
+                }
+            }
+            if (sb.Length > 0) tokens.Add(sb.ToString());
+            return tokens;
+        }
+
+        /// <summary>Splits a bracket-only suffix like "[0][1]" into ["[0]","[1]"].</summary>
+        private static List<string> TokenizeBrackets(string brackets)
+        {
+            var tokens = new List<string>();
+            var sb = new System.Text.StringBuilder();
+            foreach (var ch in brackets)
+            {
+                if (ch == '[' && sb.Length > 0) { tokens.Add(sb.ToString()); sb.Clear(); }
+                sb.Append(ch);
+            }
+            if (sb.Length > 0) tokens.Add(sb.ToString());
+            return tokens;
         }
     }
 }

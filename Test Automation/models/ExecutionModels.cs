@@ -6,6 +6,22 @@ using System.Threading;
 
 namespace Test_Automation.Models
 {
+    public enum TraceLevel
+    {
+        Verbose,
+        Info,
+        Warning,
+        Error
+    }
+
+    public class TraceEventArgs
+    {
+        public TraceLevel Level { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string ComponentId { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    }
+
     /// <summary>
     /// Execution context for a test plan run
     /// </summary>
@@ -269,6 +285,9 @@ namespace Test_Automation.Models
 
         [JsonPropertyName("assertPassedCount")]
         public int AssertPassedCount { get; set; }
+
+        [JsonPropertyName("logs")]
+        public List<TraceEventArgs> Logs { get; set; } = new List<TraceEventArgs>();
 
         [JsonPropertyName("previewData")]
         public ComponentPreviewData? PreviewData { get; set; }
