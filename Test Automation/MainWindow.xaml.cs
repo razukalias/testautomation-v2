@@ -2058,14 +2058,11 @@ namespace Test_Automation
                 });
 
                 _lastExecutionContext = context;
-                // Build hierarchical variable structure with only the executed testplan
+                // Build hierarchical variable structure using RUNTIME context values (includes extractor-updated values)
                 var projectNode = RootNodes.FirstOrDefault(n => n.Type == "Project");
-                var projectVariables = projectNode != null
-                    ? BuildDictionaryWithOverwrite(projectNode.Variables)
-                        .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase)
-                    : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-                var testPlanVars = BuildDictionaryWithOverwrite(testPlanNode.Variables)
-                    .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase);
+                // Use runtime context values so extractor-updated variables are reflected
+                var projectVariables = BuildRuntimeProjectVariables(context, projectNode);
+                var testPlanVars = BuildRuntimeTestPlanVariables(context, testPlanNode);
                 // Use consistent structure with "testPlans" wrapper
                 var testPlansDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -2233,17 +2230,14 @@ namespace Test_Automation
                 }
 
                 _lastExecutionContext = mergedExecutionContext;
-                // Build hierarchical variable structure with all testplans
+                // Build hierarchical variable structure with all testplans using RUNTIME context values
                 var projectNode = RootNodes.FirstOrDefault(n => n.Type == "Project");
-                var projectVariables = projectNode != null
-                    ? BuildDictionaryWithOverwrite(projectNode.Variables)
-                        .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase)
-                    : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                // Use runtime context values so extractor-updated variables are reflected
+                var projectVariables = BuildRuntimeProjectVariables(mergedExecutionContext, projectNode);
                 var allTestPlanVars = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                 foreach (var plan in testPlanNodes)
                 {
-                    var tpVars = BuildDictionaryWithOverwrite(plan.Variables)
-                        .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase);
+                    var tpVars = BuildRuntimeTestPlanVariables(mergedExecutionContext, plan);
                     if (tpVars.Count > 0)
                         allTestPlanVars[plan.Name] = tpVars;
                 }
@@ -2544,26 +2538,21 @@ namespace Test_Automation
                 });
 
                 _lastExecutionContext = context;
-                // Build hierarchical variable structure
+                // Build hierarchical variable structure using RUNTIME context values (includes extractor-updated values)
                 var projectNode = RootNodes.FirstOrDefault(n => n.Type == "Project");
-                var projectVariables = projectNode != null
-                    ? BuildDictionaryWithOverwrite(projectNode.Variables)
-                        .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase)
-                    : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-                var varsDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
-                {
-                    { "projectVariables", projectVariables }
-                };
+                // Use runtime context values so extractor-updated variables are reflected
+                var projectVariables = BuildRuntimeProjectVariables(context, projectNode);
                 var testPlansDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                 if (parentTestPlan != null)
                 {
-                    var testPlanVars = BuildDictionaryWithOverwrite(parentTestPlan.Variables)
-                        .ToDictionary(e => e.Key, e => (object)e.Value, StringComparer.OrdinalIgnoreCase);
-                    // Use consistent structure with "testPlans" wrapper
+                    var testPlanVars = BuildRuntimeTestPlanVariables(context, parentTestPlan);
                     testPlansDict[parentTestPlan.Name] = testPlanVars;
                 }
-                // Use consistent structure with "testPlans" wrapper
-                varsDict["testPlans"] = testPlansDict;
+                var varsDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "projectVariables", projectVariables },
+                    { "testPlans", testPlansDict }
+                };
                 // Store hierarchical variables in context for assertion service
                 context.HierarchicalVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -2635,6 +2624,50 @@ namespace Test_Automation
                 System.Diagnostics.Debug.WriteLine($"[DEBUG]   Setting variable '{variable.Key}' = '{variable.Value}' in context {context.ExecutionId}");
                 context.SetVariable(variable.Key, variable.Value);
             }
+        }
+
+        /// <summary>
+        /// Builds a dictionary of project variables using RUNTIME context values.
+        /// Uses the node to identify which keys are project-level, but reads current values from context.
+        /// This ensures extractor-assigned values are reflected in the post-run preview.
+        /// </summary>
+        private Dictionary<string, object> BuildRuntimeProjectVariables(
+            Test_Automation.Models.ExecutionContext context,
+            PlanNode? projectNode)
+        {
+            var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            if (projectNode == null) return result;
+
+            foreach (var variable in projectNode.Variables)
+            {
+                if (string.IsNullOrWhiteSpace(variable.Key)) continue;
+                // Prefer the runtime value (updated by extractors); fall back to static definition
+                var runtimeValue = context.GetVariable(variable.Key);
+                result[variable.Key] = runtimeValue ?? (object)(variable.Value ?? string.Empty);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Builds a dictionary of test-plan variables using RUNTIME context values.
+        /// Uses the node to identify which keys are testplan-level, but reads current values from context.
+        /// This ensures extractor-assigned values are reflected in the post-run preview.
+        /// </summary>
+        private Dictionary<string, object> BuildRuntimeTestPlanVariables(
+            Test_Automation.Models.ExecutionContext context,
+            PlanNode? testPlanNode)
+        {
+            var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            if (testPlanNode == null) return result;
+
+            foreach (var variable in testPlanNode.Variables)
+            {
+                if (string.IsNullOrWhiteSpace(variable.Key)) continue;
+                // Prefer the runtime value (updated by extractors); fall back to static definition
+                var runtimeValue = context.GetVariable(variable.Key);
+                result[variable.Key] = runtimeValue ?? (object)(variable.Value ?? string.Empty);
+            }
+            return result;
         }
 
         private void SetContextHierarchicalVariables(Test_Automation.Models.ExecutionContext context, PlanNode testPlanNode)
@@ -2877,37 +2910,50 @@ namespace Test_Automation
                 current = current.Parent;
             }
 
-            // Collect only the TestPlan variables that are in scope
+
+            var context = _lastExecutionContext;
+
+            // Build preview using runtime context values if available (preserves extractor-assigned values)
+            // IMPORTANT: Do NOT write static values back into the context here - that would overwrite extracted values
+            Dictionary<string, object> projectVarsForDisplay;
+            Dictionary<string, object> testPlanVarsForDisplay;
+            if (context != null)
+            {
+                projectVarsForDisplay = BuildRuntimeProjectVariables(context, projectNode);
+                testPlanVarsForDisplay = testPlanNode != null
+                    ? BuildRuntimeTestPlanVariables(context, testPlanNode)
+                    : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            }
+            else
+            {
+                // No runtime context yet — fall back to static definitions
+                projectVarsForDisplay = projectVariables;
+                testPlanVarsForDisplay = testPlanNode != null
+                    ? BuildDictionaryWithOverwrite(testPlanNode.Variables)
+                        .ToDictionary(entry => entry.Key, entry => (object)entry.Value, StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            }
+
             var scopedTestPlanVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-            if (testPlanNode != null)
+            if (testPlanNode != null && testPlanVarsForDisplay.Count > 0)
             {
-                var tpVars = BuildDictionaryWithOverwrite(testPlanNode.Variables)
-                    .ToDictionary(entry => entry.Key, entry => (object)entry.Value, StringComparer.OrdinalIgnoreCase);
-                if (tpVars.Count > 0)
+                scopedTestPlanVariables[testPlanNode.Name] = testPlanVarsForDisplay;
+            }
+
+            if (context != null)
+            {
+                // Update hierarchical structure in context (for assertions) without overwriting flat variables
+                context.HierarchicalVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
                 {
-                    scopedTestPlanVariables[testPlanNode.Name] = tpVars;
-                }
+                    { "projectVariables", projectVarsForDisplay },
+                    { "testPlans", scopedTestPlanVariables }
+                };
             }
-
-            var context = _lastExecutionContext ?? new Test_Automation.Models.ExecutionContext();
-            foreach (var entry in projectVariables)
-            {
-                context.SetVariable(entry.Key, entry.Value);
-            }
-
-            _lastExecutionContext = context;
-
-            // Store hierarchical variables in context for assertion service
-            context.HierarchicalVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "projectVariables", projectVariables },
-                { "testPlans", scopedTestPlanVariables }
-            };
 
             // Show only scoped variables
             VariablesPreview = JsonSerializer.Serialize(new
             {
-                projectVariables = projectVariables,
+                projectVariables = projectVarsForDisplay,
                 testPlans = scopedTestPlanVariables
             }, PrettyJsonOptions);
         }
