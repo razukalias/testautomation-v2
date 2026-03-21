@@ -31,43 +31,35 @@
             <StackPanel Grid.Row="0">
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                 <Button x:Name="AddProjectButton"
-                    Height="32"
-                    Width="100"
-                    Margin="0,0,8,0"
-                    Content="Add Project"
+                    Height="32" Width="105" Margin="0,0,8,0"
+                    Content="➕ Add Project"
                     Click="AddProjectButton_Click" />
                 <Button x:Name="SaveProjectButton"
-                    Height="32"
-                    Width="70"
-                    Margin="0,0,8,0"
-                    Content="Save"
+                    Height="32" Width="70" Margin="0,0,8,0"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Content="💾 Save"
                     Click="SaveProjectButton_Click" />
                 <Button x:Name="SaveProjectAsButton"
-                    Height="32"
-                    Width="80"
-                    Margin="0,0,8,0"
-                    Content="Save As"
+                    Height="32" Width="85" Margin="0,0,8,0"
+                    Content="💾 Save As"
                     Click="SaveProjectAsButton_Click" />
                 <Button x:Name="LoadProjectButton"
-                    Height="32"
-                    Width="90"
-                    Content="Load JSON"
+                    Height="32" Width="95"
+                    Content="📂 Load JSON"
                     Click="LoadProjectButton_Click" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                 <Button x:Name="RunTestPlanButton"
-                    Height="32"
-                    Width="120"
-                    Content="Run TestPlan"
+                    Height="32" Width="120"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Content="▶ Run TestPlan"
                     Click="RunTestPlanButton_Click" />
                 <Button x:Name="StopRunButton"
-                    Height="32"
-                    Width="90"
-                    Margin="8,0,0,0"
-                    Content="Stop"
+                    Height="32" Width="80" Margin="8,0,0,0"
+                    Content="⏹ Stop"
                     IsEnabled="False"
                     Click="StopRunButton_Click" />
-                <Button x:Name="ToggleThemeButton" Height="32" Width="90" Margin="8,0,0,0" Content="Toggle Theme" Click="ToggleThemeButton_Click" />
+                <Button x:Name="ToggleThemeButton" Height="32" Width="110" Margin="8,0,0,0" Content="🌗 Toggle Theme" Click="ToggleThemeButton_Click" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                 <TextBlock VerticalAlignment="Center" Text="Environment" Margin="0,0,8,0" />
@@ -273,8 +265,9 @@
                                                       ItemsSource="{Binding ProjectRunModeOptions}"
                                                       SelectedItem="{Binding SelectedProjectRunMode, UpdateSourceTrigger=PropertyChanged}" />
                                             <Button x:Name="RunProjectTestPlansButton"
-                                                    Width="130"
-                                                    Content="Run TestPlans"
+                                                    Width="150"
+                                                    Style="{StaticResource PrimaryButtonStyle}"
+                                                    Content="▶ Run TestPlans"
                                                     Click="RunProjectTestPlansButton_Click" />
                                         </StackPanel>
 

@@ -2435,6 +2435,30 @@ namespace Test_Automation
                 menu.Items.Add(clearPreviewItem);
                 menu.Items.Add(new Separator());
             }
+            else
+            {
+                var runSeqItem = new MenuItem { Header = "Run in Sequence" };
+                runSeqItem.Click += (_, _) => 
+                {
+                    SelectedProjectRunMode = "Sequence";
+                    RunProjectTestPlansButton_Click(this, new RoutedEventArgs());
+                };
+                menu.Items.Add(runSeqItem);
+
+                var runParItem = new MenuItem { Header = "Run in Parallel" };
+                runParItem.Click += (_, _) => 
+                {
+                    SelectedProjectRunMode = "Parallel";
+                    RunProjectTestPlansButton_Click(this, new RoutedEventArgs());
+                };
+                menu.Items.Add(runParItem);
+                
+                var clearPreviewItem = new MenuItem { Header = "Clear Preview (This + Children)" };
+                clearPreviewItem.Click += (_, _) => ClearSelectedNodePreviewWithChildren(selectedNode);
+                menu.Items.Add(clearPreviewItem);
+                
+                menu.Items.Add(new Separator());
+            }
 
             var cloneItem = new MenuItem { Header = "Clone" };
             cloneItem.Click += (_, _) => CloneNode(selectedNode);
