@@ -14,14 +14,14 @@
         <conv:VariableSettingUsageLabelConverter x:Key="VariableSettingUsageLabelConverter" />
         <conv:VariableSettingUsageTooltipConverter x:Key="VariableSettingUsageTooltipConverter" />
     </Window.Resources>
-    <Grid>
+    <Grid Background="{DynamicResource WindowBackgroundBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="MainLeftColumn" Width="320" MinWidth="220" />
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition x:Name="MainRightColumn" Width="*" MinWidth="420" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" BorderBrush="#D0D0D0" BorderThickness="0,0,1,0" Background="#FAFAFA">
+        <Border Grid.Column="0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0" Background="{DynamicResource SurfaceBrush}">
             <Grid Margin="12">
                 <Grid.RowDefinitions>
                     <RowDefinition x:Name="LeftTopControlsRow" Height="Auto" MinHeight="140" />
@@ -67,6 +67,7 @@
                     Content="Stop"
                     IsEnabled="False"
                     Click="StopRunButton_Click" />
+                <Button x:Name="ToggleThemeButton" Height="32" Width="90" Margin="8,0,0,0" Content="Toggle Theme" Click="ToggleThemeButton_Click" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                 <TextBlock VerticalAlignment="Center" Text="Environment" Margin="0,0,8,0" />
@@ -86,7 +87,7 @@
                               Height="6"
                               HorizontalAlignment="Stretch"
                               VerticalAlignment="Center"
-                              Background="#E0E0E0"
+                              Background="{DynamicResource BorderBrush}"
                               ResizeDirection="Rows"
                               ResizeBehavior="PreviousAndNext"
                               ShowsPreview="True" />
@@ -125,7 +126,7 @@
                                 <TextBlock Text="{Binding DisplayName}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="#202020" />
+                                            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding AssertionSeverity}" Value="AssertFailed">
                                                     <Setter Property="Foreground" Value="#B00020" />
@@ -147,7 +148,7 @@
                                            Visibility="{Binding HasAssertionSummary, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="#6B7280" />
+                                            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding AssertionSeverity}" Value="AssertFailed">
                                                     <Setter Property="Foreground" Value="#B00020" />
@@ -173,20 +174,20 @@
                   Width="6"
                   HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch"
-                  Background="#E0E0E0"
+                  Background="{DynamicResource BorderBrush}"
                   ResizeDirection="Columns"
                   ResizeBehavior="PreviousAndNext"
                   ShowsPreview="True" />
 
-        <Grid x:Name="MainContentGrid" Grid.Column="2" Background="#FFFFFF" Margin="16">
+        <Grid x:Name="MainContentGrid" Grid.Column="2" Background="{DynamicResource WindowBackgroundBrush}" Margin="16">
             <Grid.RowDefinitions>
                 <RowDefinition x:Name="EditorTopRow" Height="2*" MinHeight="280" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition x:Name="EditorBottomRow" Height="*" MinHeight="80" />
             </Grid.RowDefinitions>
 
-            <Border BorderBrush="#D8D8D8" BorderThickness="1" Padding="12" CornerRadius="4">
-                <Grid>
+            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="12" CornerRadius="4">
+                <Grid Background="{DynamicResource WindowBackgroundBrush}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" MinHeight="220" />
@@ -222,6 +223,14 @@
                         <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Name" />
                         <TextBox Grid.Column="1" Text="{Binding SelectedNode.Name, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
+                    <Grid Margin="0,0,0,8" Visibility="{Binding IsProjectSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Project Path" />
+                        <TextBox Grid.Column="1" Text="{Binding CurrentProjectFilePath, Mode=OneWay}" IsReadOnly="True" />
+                    </Grid>
 
                     <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
@@ -243,7 +252,7 @@
 
                         <Grid Grid.Row="1">
 
-                    <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             VerticalAlignment="Stretch"
                             Visibility="{Binding IsProjectSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                         <TabControl HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
@@ -268,6 +277,7 @@
                                                     Content="Run TestPlans"
                                                     Click="RunProjectTestPlansButton_Click" />
                                         </StackPanel>
+
                                         <Grid Margin="0,0,0,6">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="100" />
@@ -276,7 +286,7 @@
                                             <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Description" />
                                             <TextBox Grid.Column="1" Text="{Binding ProjectDescription, UpdateSourceTrigger=PropertyChanged}" />
                                         </Grid>
-                                        <Grid>
+                                        <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="100" />
                                                 <ColumnDefinition Width="*" />
@@ -300,7 +310,7 @@
                                                         </Grid.ColumnDefinitions>
                                                         <TextBox Grid.Column="0" Margin="0,0,6,0" Text="{Binding Key, UpdateSourceTrigger=LostFocus}" />
                                                         <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding Value, UpdateSourceTrigger=LostFocus}" />
-                                                        <TextBlock Grid.Column="2" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="#666666">
+                                                        <TextBlock Grid.Column="2" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}">
                                                             <TextBlock.Text>
                                                                 <MultiBinding Converter="{StaticResource VariableUsageLabelConverter}">
                                                                     <Binding Path="Key" />
@@ -343,7 +353,7 @@
                                         <ItemsControl ItemsSource="{Binding ProjectUrlCatalogEntries}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border BorderBrush="#E3E3E3" BorderThickness="1" CornerRadius="3" Padding="8" Margin="0,0,0,8">
+                                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="8" Margin="0,0,0,8">
                                                         <StackPanel>
                                                             <Grid Margin="0,0,0,6">
                                                                 <Grid.ColumnDefinitions>
@@ -369,7 +379,7 @@
                                                             <ItemsControl ItemsSource="{Binding Endpoints}">
                                                                 <ItemsControl.ItemTemplate>
                                                                     <DataTemplate>
-                                                                        <Border BorderBrush="#D7D7D7" BorderThickness="1" CornerRadius="3" Padding="8" Margin="0,0,0,8">
+                                                                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="8" Margin="0,0,0,8">
                                                                             <StackPanel>
                                                                                 <Grid Margin="0,0,0,6">
                                                                                     <Grid.ColumnDefinitions>
@@ -450,7 +460,7 @@
                                                                                     <TextBlock Grid.Column="0" VerticalAlignment="Top" Text="GraphQL Query" />
                                                                                     <TextBox Grid.Column="1" Height="70" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Text="{Binding Query, UpdateSourceTrigger=LostFocus}" />
                                                                                 </Grid>
-                                                                                <Grid>
+                                                                                <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                                                                     <Grid.ColumnDefinitions>
                                                                                         <ColumnDefinition Width="100" />
                                                                                         <ColumnDefinition Width="*" />
@@ -533,7 +543,7 @@
                         </TabControl>
                     </Border>
 
-                    <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             VerticalAlignment="Stretch"
                             Visibility="{Binding IsComponentSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                             <TabControl HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Stretch">
@@ -541,15 +551,15 @@
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <StackPanel Margin="8">
 
-                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,6,0,8"
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,6,0,8"
                             Visibility="{Binding IsHttpSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="HTTP" FontWeight="SemiBold" Margin="0,0,0,6" />
-                            <Border Background="#F7F9FC" BorderBrush="#D8E2F0" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,8">
+                            <Border Background="{DynamicResource SurfaceHoverBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,8">
                                 <StackPanel>
-                                    <TextBlock Text="Fill From Project URLs" FontWeight="SemiBold" Foreground="#2F4F6F" />
+                                    <TextBlock Text="Fill From Project URLs" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
                                     <TextBlock Margin="0,2,0,8"
-                                               Foreground="#5F6F82"
+                                               Foreground="{DynamicResource TextMutedBrush}"
                                                Text="Optional helper. Choose a saved base URL and endpoint, then apply it to the manual fields below." />
                                     <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
@@ -587,7 +597,7 @@
                                           ItemsSource="{Binding HttpMethodOptions}"
                                           SelectedItem="{Binding HttpMethod, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
-                            <Grid>
+                            <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
@@ -729,7 +739,7 @@
                                     <Binding Path="HttpShowOAuthFields" Converter="{StaticResource BoolToVisibilityConverter}" />
                                 </Grid.Visibility>
                             </Grid>
-                            <Grid>
+                            <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
@@ -743,15 +753,15 @@
                         </StackPanel>
                     </Border>
 
-                    <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsGraphQlSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="GraphQL" FontWeight="SemiBold" Margin="0,0,0,6" />
-                            <Border Background="#F7F9FC" BorderBrush="#D8E2F0" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,8">
+                            <Border Background="{DynamicResource SurfaceHoverBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,8">
                                 <StackPanel>
-                                    <TextBlock Text="Fill From Project URLs" FontWeight="SemiBold" Foreground="#2F4F6F" />
+                                    <TextBlock Text="Fill From Project URLs" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
                                     <TextBlock Margin="0,2,0,8"
-                                               Foreground="#5F6F82"
+                                               Foreground="{DynamicResource TextMutedBrush}"
                                                Text="Optional helper. Choose a saved base URL and endpoint, then apply it to the manual fields below." />
                                     <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
@@ -795,7 +805,7 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Top" Text="Query" />
                                 <TextBox Grid.Column="1" Text="{Binding GraphQlQuery, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="80" VerticalScrollBarVisibility="Auto" />
                             </Grid>
-                            <Grid>
+                            <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
@@ -921,7 +931,7 @@
                                     <Binding Path="GraphQlShowOAuthFields" Converter="{StaticResource BoolToVisibilityConverter}" />
                                 </Grid.Visibility>
                             </Grid>
-                            <Grid>
+                            <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
@@ -935,7 +945,7 @@
                         </StackPanel>
                     </Border>
 
-                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsSqlSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="SQL" FontWeight="SemiBold" Margin="0,0,0,6" />
@@ -965,7 +975,7 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Resolved Conn" />
                                 <TextBox Grid.Column="1" Text="{Binding SqlConnectionResolved, Mode=OneWay}" IsReadOnly="True" />
                             </Grid>
-                            <Grid>
+                            <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
@@ -1008,7 +1018,7 @@
                                     <Binding Path="SqlShowBasicFields" Converter="{StaticResource BoolToVisibilityConverter}" />
                                 </Grid.Visibility>
                             </Grid>
-                            <Grid>
+                            <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
@@ -1022,7 +1032,7 @@
                         </StackPanel>
                     </Border>
 
-                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsDatasetSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="Dataset" FontWeight="SemiBold" Margin="0,0,0,6" />
@@ -1102,7 +1112,7 @@
                                 <Button Grid.Column="2" Content="Refresh Preview" Width="110" Click="RefreshDatasetPreviewButton_Click" />
                             </Grid>
                             <TextBlock Margin="0,0,0,6" Foreground="#4F5D6B" Text="{Binding DatasetPreviewStatus}" TextWrapping="Wrap" />
-                            <Border BorderBrush="#D7D7D7" BorderThickness="1" CornerRadius="3" Padding="4">
+                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="4">
                                 <DataGrid ItemsSource="{Binding DatasetPreviewRows}"
                                           AutoGenerateColumns="True"
                                           AutoGeneratingColumn="DatasetPreviewGrid_AutoGeneratingColumn"
@@ -1117,9 +1127,9 @@
                         </StackPanel>
                     </Border>
 
-                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsTimerSelected, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <Grid>
+                        <Grid Background="{DynamicResource WindowBackgroundBrush}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="100" />
                                 <ColumnDefinition Width="*" />
@@ -1129,9 +1139,9 @@
                         </Grid>
                     </Border>
 
-                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsLoopSelected, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <Grid>
+                        <Grid Background="{DynamicResource WindowBackgroundBrush}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="100" />
                                 <ColumnDefinition Width="*" />
@@ -1141,7 +1151,7 @@
                         </Grid>
                     </Border>
 
-                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsForeachSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <Grid Margin="0,0,0,6">
@@ -1153,7 +1163,7 @@
                                 <TextBox Grid.Column="1" Text="{Binding ForeachSourceVariable, UpdateSourceTrigger=PropertyChanged}"
                                          ToolTip="Variable name holding a collection (array, JSON array, or comma-separated string). Each iteration exposes CurrentItem and CurrentIndex." />
                             </Grid>
-                            <Grid>
+                            <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
@@ -1165,9 +1175,9 @@
                         </StackPanel>
                     </Border>
 
-                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsIfSelected, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <Grid>
+                        <Grid Background="{DynamicResource WindowBackgroundBrush}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="100" />
                                 <ColumnDefinition Width="*" />
@@ -1177,7 +1187,7 @@
                         </Grid>
                     </Border>
 
-                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsThreadsSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="Threads" FontWeight="SemiBold" Margin="0,0,0,6" />
@@ -1189,7 +1199,7 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Count" />
                                 <TextBox Grid.Column="1" Text="{Binding ThreadCount, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
-                            <Grid>
+                            <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
@@ -1200,7 +1210,7 @@
                         </StackPanel>
                     </Border>
 
-                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsAssertSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="Assert" FontWeight="SemiBold" Margin="0,0,0,6" />
@@ -1212,7 +1222,7 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Expected" />
                                 <TextBox Grid.Column="1" Text="{Binding AssertExpected, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
-                            <Grid>
+                            <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
@@ -1223,7 +1233,7 @@
                         </StackPanel>
                     </Border>
 
-                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsVariableExtractorSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="Variable Extractor" FontWeight="SemiBold" Margin="0,0,0,6" />
@@ -1235,7 +1245,7 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Pattern" />
                                 <TextBox Grid.Column="1" Text="{Binding ExtractorPattern, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
-                            <Grid>
+                            <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
@@ -1247,7 +1257,7 @@
                                           SelectedItem="{Binding ExtractorVariableName, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           Margin="0,0,6,0" />
-                                <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="#666666">
+                                <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}">
                                     <TextBlock.Text>
                                         <MultiBinding Converter="{StaticResource VariableUsageLabelConverter}">
                                             <Binding Path="ExtractorVariableName" />
@@ -1265,7 +1275,7 @@
                         </StackPanel>
                     </Border>
 
-                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsScriptSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="Script" FontWeight="SemiBold" Margin="0,0,0,6" />
@@ -1277,7 +1287,7 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Language" />
                                 <TextBox Grid.Column="1" Text="{Binding ScriptLanguage, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
-                            <Grid>
+                            <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
@@ -1296,7 +1306,7 @@
                         </StackPanel>
                     </Border>
 
-                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsTestPlanSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="TestPlan" FontWeight="SemiBold" Margin="0,0,0,6" />
@@ -1310,7 +1320,7 @@
                                           ItemsSource="{Binding ExecutionTypeOptions}"
                                           SelectedItem="{Binding SelectedExecutionType, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
-                            <TextBlock Text="PreExecute runs first, PostExecute runs last" Foreground="#666666" FontStyle="Italic" Margin="0,0,0,6" />
+                            <TextBlock Text="PreExecute runs first, PostExecute runs last" Foreground="{DynamicResource TextMutedBrush}" FontStyle="Italic" Margin="0,0,0,6" />
                             <TextBlock Text="Local Variables" FontWeight="SemiBold" Margin="0,10,0,6" />
                             <ScrollViewer MinHeight="80" VerticalScrollBarVisibility="Auto" VerticalAlignment="Stretch">
                                 <ItemsControl ItemsSource="{Binding TestPlanVariablesForEditor}">
@@ -1339,7 +1349,7 @@
                                 </TabItem>
 
                                 <TabItem Header="Extract Variables">
-                    <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8">
+                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8">
                         <StackPanel>
                             <TextBlock Text="Extract Variables" FontWeight="SemiBold" Margin="0,0,0,6" />
 
@@ -1393,7 +1403,7 @@
                                                           IsEditable="True"
                                                           IsTextSearchEnabled="True"
                                                           Text="{Binding VariableName, UpdateSourceTrigger=PropertyChanged}" />
-                                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" Foreground="#666666">
+                                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}">
                                                         <TextBlock.Text>
                                                             <MultiBinding Converter="{StaticResource VariableUsageLabelConverter}">
                                                                 <Binding Path="VariableName" />
@@ -1424,7 +1434,7 @@
 
                             <TabItem Header="Assertions">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                        <Border BorderBrush="#E3E3E3" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8">
                         <StackPanel>
                             <TextBlock Text="Assertions" FontWeight="SemiBold" Margin="0,0,0,6" />
 
@@ -1503,7 +1513,7 @@
                                                         <TextBlock Text="{Binding StatusLabel}" ToolTip="{Binding StatusMessage}" HorizontalAlignment="Center">
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
-                                                                    <Setter Property="Foreground" Value="#6B7280" />
+                                                                    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
                                                                     <Style.Triggers>
                                                                         <DataTrigger Binding="{Binding LastResultState}" Value="Passed">
                                                                             <Setter Property="Foreground" Value="#166534" />
@@ -1533,13 +1543,13 @@
                                               Height="6"
                                               HorizontalAlignment="Stretch"
                                               VerticalAlignment="Center"
-                                              Background="#E0E0E0"
+                                              Background="{DynamicResource BorderBrush}"
                                               ResizeDirection="Rows"
                                               ResizeBehavior="PreviousAndNext"
                                               ShowsPreview="True" />
 
                                 <Border Grid.Row="2" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="3" Padding="8" Margin="0,8,0,0">
-                                <Grid>
+                                <Grid Background="{DynamicResource WindowBackgroundBrush}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" MinHeight="80" />
@@ -1580,7 +1590,7 @@
                                                 Width="6"
                                                 HorizontalAlignment="Stretch"
                                                 VerticalAlignment="Stretch"
-                                                Background="#E0E0E0"
+                                                Background="{DynamicResource BorderBrush}"
                                                 ResizeDirection="Columns"
                                                 ResizeBehavior="PreviousAndNext"
                                                 ShowsPreview="True" />
@@ -1772,7 +1782,7 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBox Grid.Column="0" Margin="0,0,6,0" Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}" />
                                         <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" />
-                                        <TextBlock Grid.Column="2" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="#666666">
+                                        <TextBlock Grid.Column="2" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}">
                                             <TextBlock.Text>
                                                 <MultiBinding Converter="{StaticResource VariableSettingUsageLabelConverter}">
                                                     <Binding Path="Key" />
@@ -1807,11 +1817,11 @@
                           Margin="0,10,0,10"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Center"
-                          Background="#E0E0E0"
+                          Background="{DynamicResource BorderBrush}"
                           ResizeDirection="Rows"
                           ResizeBehavior="PreviousAndNext" />
 
-            <Border Grid.Row="2" MinHeight="80" BorderBrush="#D8D8D8" BorderThickness="1" Padding="12" CornerRadius="4" Margin="0,0,0,0">
+            <Border Grid.Row="2" MinHeight="80" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="12" CornerRadius="4" Margin="0,0,0,0">
                 <StackPanel>
                     <TextBlock Text="Global Preview Panel" FontWeight="SemiBold" Margin="0,0,0,4" />
                     <TextBlock Text="Preview tabs are now available directly inside Project and Component editor tabs." Foreground="#555555" />
@@ -1820,3 +1830,6 @@
         </Grid>
     </Grid>
 </Window>
+
+
+

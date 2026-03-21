@@ -140,6 +140,7 @@ namespace Test_Automation
         private int _variableUsageVersion;
         private Dictionary<string, List<string>> _variableUsageMap = new(StringComparer.OrdinalIgnoreCase);
         private string? _currentProjectFilePath;
+        public string CurrentProjectFilePath => string.IsNullOrWhiteSpace(_currentProjectFilePath) ? "Unsaved Project" : _currentProjectFilePath;
         private string _jsonPreview = "{}";
         private string _previewRequest = "Select a component to see request preview.";
         private string _previewResponse = "Select a component to see response preview.";
@@ -1694,6 +1695,7 @@ namespace Test_Automation
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
                     _currentProjectFilePath = null;
+                OnPropertyChanged(nameof(CurrentProjectFilePath));
                     UpdateWindowTitle();
                     SaveAppState();
                     return;
@@ -1755,6 +1757,7 @@ namespace Test_Automation
                 RootNodes.Add(root);
                 SelectedNode = root;
                 _currentProjectFilePath = filePath;
+                OnPropertyChanged(nameof(CurrentProjectFilePath));
                 UpdateWindowTitle();
                 RefreshEnvironmentOptions();
                 RefreshJsonPreview();
@@ -1861,6 +1864,14 @@ namespace Test_Automation
             }
         }
 
+        private bool _isDarkTheme = false;
+
+        private void ToggleThemeButton_Click(object sender, RoutedEventArgs e)
+        {
+            _isDarkTheme = !_isDarkTheme;
+            App.ChangeTheme(_isDarkTheme ? "DarkTheme" : "LightTheme");
+        }
+
         private void AddProjectButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -1875,6 +1886,7 @@ namespace Test_Automation
                 RootNodes.Add(root);
                 SelectedNode = root;
                 _currentProjectFilePath = null;
+                OnPropertyChanged(nameof(CurrentProjectFilePath));
                 UpdateWindowTitle();
                 SaveAppState();
                 RefreshEnvironmentOptions();
@@ -1938,6 +1950,7 @@ namespace Test_Automation
             {
                 SaveProjectToFile(dialog.FileName, projectNode);
                 _currentProjectFilePath = dialog.FileName;
+                OnPropertyChanged(nameof(CurrentProjectFilePath));
                 UpdateWindowTitle();
                 SaveAppState();
                 MessageBox.Show("Project saved successfully.", "Save Project", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -8525,3 +8538,4 @@ namespace Test_Automation
         }
     }
 }
+

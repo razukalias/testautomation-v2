@@ -1,4 +1,4 @@
-﻿using System.Configuration;
+using System.Configuration;
 using System.Data;
 using System.Diagnostics;
 using System.Windows;
@@ -17,6 +17,22 @@ namespace Test_Automation
             // (e.g., TreeViewItem ancestor lookups). They are non-fatal and clutter Output.
             PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Critical;
             base.OnStartup(e);
+        }
+
+        public static void ChangeTheme(string themeName)
+        {
+            var app = (App)Current;
+            app.Resources.MergedDictionaries.Clear();
+            try
+            {
+                app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri($"pack://application:,,,/Themes/{themeName}.xaml") });
+                app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Themes/Styles.xaml") });
+            }
+            catch (Exception ex)
+            {
+                // Fallback or ignore if resource not found
+                System.Diagnostics.Debug.WriteLine($"Error changing theme: {ex.Message}");
+            }
         }
     }
 

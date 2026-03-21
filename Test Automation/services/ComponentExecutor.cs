@@ -105,7 +105,7 @@ namespace Test_Automation.Services
                     TraceLog($"[PREVIEW]   Variable: {var.Key} = {var.Value}");
                 }
 
-                var assertionResults = _assertionService.EvaluateAssertions(component, componentData, context, TraceLog);
+                var assertionResults = await _assertionService.EvaluateAssertionsAsync(component, componentData, context, TraceLog);
                 result.AssertionResults = assertionResults;
                 result.AssertFailedCount = assertionResults.Count(item => !item.Passed && IsAssertMode(item.Mode));
                 result.ExpectFailedCount = assertionResults.Count(item => !item.Passed && !IsAssertMode(item.Mode));

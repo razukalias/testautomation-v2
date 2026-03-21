@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Test_Automation.Componentes;
 using Test_Automation.Models;
 using Test_Automation.Models.Editor;
@@ -102,6 +103,95 @@ namespace Test_Automation.Services
             return results;
         }
 
+        public async Task<List<AssertionEvaluationResult>> EvaluateAssertionsAsync(Component component, ComponentData? componentData, ExecutionContext context, Action<string> trace)
+        {
+            var results = new List<AssertionEvaluationResult>();
+            if (component.Assertions == null || componentData == null)
+            {
+                return results;
+            }
+
+            trace($"Evaluating {component.Assertions.Count} assertions for {component.Name}.");
+
+            for (var index = 0; index < component.Assertions.Count; index++)
+            {
+                var assertion = component.Assertions[index];
+                
+                // Handle Variable source - get value from context
+                object? sourceValue;
+                if (assertion.Source.StartsWith("Variable.", StringComparison.OrdinalIgnoreCase))
+                {
+                    var varName = assertion.Source.Substring("Variable.".Length);
+                    sourceValue = context.GetVariable(varName);
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Variable.{varName} = {sourceValue}");
+                    trace($"[ASSERT] Assertion source Variable.{varName} = {sourceValue}");
+                }
+                else if (assertion.Source.StartsWith("PreviewVariables.", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Handle PreviewVariables.varname - get specific variable from context
+                    var varName = assertion.Source.Substring("PreviewVariables.".Length);
+                    sourceValue = context.GetVariable(varName);
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] PreviewVariables.{varName} = {sourceValue}");
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Context has variable '{varName}': {context.HasVariable(varName)}");
+                    trace($"[ASSERT] Assertion source PreviewVariables.{varName} = {sourceValue}");
+                    trace($"[ASSERT] Checking context for variable '{varName}': {context.HasVariable(varName)}");
+                }
+                else if (string.Equals(assertion.Source, "PreviewVariables", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Return all variables as JSON for PreviewVariables source
+                    var variables = context.GetAllVariablesForPreview();
+                    sourceValue = System.Text.Json.JsonSerializer.Serialize(variables);
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] PreviewVariables JSON = {sourceValue}");
+                    trace($"[ASSERT] Assertion source PreviewVariables = {sourceValue}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Using GetSourceValue for source: {assertion.Source}");
+                    trace($"[ASSERT] Using GetSourceValue for source: {assertion.Source}");
+                    sourceValue = GetSourceValue(assertion.Source, componentData);
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] GetSourceValue returned: {sourceValue}");
+                    trace($"[ASSERT] GetSourceValue returned: {sourceValue}");
+                }
+                
+                var actualValue = ExtractValue(sourceValue, assertion.JsonPath);
+                var actualText = ConvertToText(actualValue);
+                
+                // Handle Script condition specially with async evaluation
+                bool passed;
+                string message;
+                if (string.Equals(assertion.Condition, "Script", StringComparison.OrdinalIgnoreCase))
+                {
+                    var scriptResult = await ScriptEngine.ExecuteAsync("CSharp", assertion.Expected, context, actualText, trace);
+                    passed = scriptResult.Success && scriptResult.Result is bool boolResult && boolResult;
+                    message = scriptResult.Success 
+                        ? (passed ? $"Script evaluation returned true." : $"Script evaluation returned false. Result: {scriptResult.Result}")
+                        : $"Script error: {scriptResult.Error}";
+                }
+                else
+                {
+                    (passed, message) = Compare(actualValue, assertion.Condition, assertion.Expected);
+                }
+
+                var result = new AssertionEvaluationResult
+                {
+                    Index = index,
+                    Passed = passed,
+                    Message = message,
+                    Mode = assertion.Mode,
+                    Source = assertion.Source,
+                    JsonPath = assertion.JsonPath,
+                    Condition = assertion.Condition,
+                    Expected = assertion.Expected,
+                    Actual = actualText
+                };
+                results.Add(result);
+
+                trace($"Assertion '{assertion.Condition}' on '{assertion.Source}': expected='{assertion.Expected}', actual='{actualValue}'. Passed: {passed}.");
+            }
+
+            return results;
+        }
+
         private (bool Passed, string Message) Compare(object? actual, string condition, string expected)
         {
             var actualText = ConvertToText(actual);
@@ -120,6 +210,12 @@ namespace Test_Automation.Services
                 case "NotContains":
                     passed = !(actualText?.Contains(expected, StringComparison.Ordinal) ?? false);
                     return (passed, $"Expected value not to contain '{expected}', but it did.");
+                case "StartsWith":
+                    passed = actualText?.StartsWith(expected, StringComparison.Ordinal) ?? false;
+                    return (passed, $"Expected value to start with '{expected}', but got '{actualText}'.");
+                case "EndsWith":
+                    passed = actualText?.EndsWith(expected, StringComparison.Ordinal) ?? false;
+                    return (passed, $"Expected value to end with '{expected}', but got '{actualText}'.");
                 case "GreaterThan":
                     if (decimal.TryParse(actualText, NumberStyles.Any, CultureInfo.InvariantCulture, out var actualNum) &&
                         decimal.TryParse(expected, NumberStyles.Any, CultureInfo.InvariantCulture, out var expectedNum))
@@ -127,13 +223,48 @@ namespace Test_Automation.Services
                         return (actualNum > expectedNum, $"Expected value to be greater than '{expected}', but got '{actualText}'.");
                     }
                     return (false, "Cannot compare non-numeric values for GreaterThan.");
+                case "GreaterOrEqual":
+                    if (decimal.TryParse(actualText, NumberStyles.Any, CultureInfo.InvariantCulture, out actualNum) &&
+                        decimal.TryParse(expected, NumberStyles.Any, CultureInfo.InvariantCulture, out expectedNum))
+                    {
+                        return (actualNum >= expectedNum, $"Expected value to be greater than or equal to '{expected}', but got '{actualText}'.");
+                    }
+                    return (false, "Cannot compare non-numeric values for GreaterOrEqual.");
                 case "LessThan":
-                     if (decimal.TryParse(actualText, NumberStyles.Any, CultureInfo.InvariantCulture, out actualNum) &&
+                    if (decimal.TryParse(actualText, NumberStyles.Any, CultureInfo.InvariantCulture, out actualNum) &&
                         decimal.TryParse(expected, NumberStyles.Any, CultureInfo.InvariantCulture, out expectedNum))
                     {
                         return (actualNum < expectedNum, $"Expected value to be less than '{expected}', but got '{actualText}'.");
                     }
                     return (false, "Cannot compare non-numeric values for LessThan.");
+                case "LessOrEqual":
+                    if (decimal.TryParse(actualText, NumberStyles.Any, CultureInfo.InvariantCulture, out actualNum) &&
+                        decimal.TryParse(expected, NumberStyles.Any, CultureInfo.InvariantCulture, out expectedNum))
+                    {
+                        return (actualNum <= expectedNum, $"Expected value to be less than or equal to '{expected}', but got '{actualText}'.");
+                    }
+                    return (false, "Cannot compare non-numeric values for LessOrEqual.");
+                case "IsEmpty":
+                    passed = string.IsNullOrEmpty(actualText);
+                    return (passed, passed ? "Value is empty as expected." : $"Expected value to be empty, but got '{actualText}'.");
+                case "IsNotEmpty":
+                    passed = !string.IsNullOrEmpty(actualText);
+                    return (passed, passed ? $"Value is not empty as expected: '{actualText}'." : "Expected value to not be empty, but it was empty.");
+                case "Regex":
+                    try
+                    {
+                        var regex = new System.Text.RegularExpressions.Regex(expected);
+                        passed = regex.IsMatch(actualText ?? string.Empty);
+                        return (passed, passed ? $"Value matches regex '{expected}'." : $"Value does not match regex '{expected}'.");
+                    }
+                    catch (Exception ex)
+                    {
+                        return (false, $"Invalid regex pattern '{expected}': {ex.Message}");
+                    }
+                case "Script":
+                    // Script condition: expected should be a C# script expression that returns bool
+                    // The actual value is passed as a variable "value" for the script to evaluate
+                    return (false, "Script evaluation is not yet implemented. Expected: " + expected);
                 default:
                     return (false, $"Unsupported assertion condition: {condition}");
             }

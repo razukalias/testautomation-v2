@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Test_Automation.Models;
 using ExecutionContext = Test_Automation.Models.ExecutionContext;
 
@@ -8,5 +9,6 @@ namespace Test_Automation.Services
     {
         List<Models.Editor.AssertionRule> ResolveAssertions(List<Models.Editor.AssertionRule> assertions, ExecutionContext context);
         List<AssertionEvaluationResult> EvaluateAssertions(Componentes.Component component, ComponentData? componentData, ExecutionContext context, System.Action<string> trace);
+        Task<List<AssertionEvaluationResult>> EvaluateAssertionsAsync(Componentes.Component component, ComponentData? componentData, ExecutionContext context, System.Action<string> trace);
     }
 }

@@ -1,0 +1,25 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Light Theme Colors (Tailwind inspired) -->
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F3F4F6"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F9FAFB"/>
+    <SolidColorBrush x:Key="SurfaceSelectedBrush" Color="#EFF6FF"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="#E5E7EB"/>
+    <SolidColorBrush x:Key="BorderFocusBrush" Color="#93C5FD"/>
+    
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#3B82F6"/>
+    <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#2563EB"/>
+    <SolidColorBrush x:Key="OnPrimaryBrush" Color="#FFFFFF"/>
+
+    <SolidColorBrush x:Key="SecondaryBrush" Color="#E5E7EB"/>
+    <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#D1D5DB"/>
+    <SolidColorBrush x:Key="OnSecondaryBrush" Color="#374151"/>
+
+    <SolidColorBrush x:Key="TextBrush" Color="#1F2937"/>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#6B7280"/>
+
+    <SolidColorBrush x:Key="ErrorBrush" Color="#EF4444"/>
+    <SolidColorBrush x:Key="SuccessBrush" Color="#10B981"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#F59E0B"/>
+</ResourceDictionary>

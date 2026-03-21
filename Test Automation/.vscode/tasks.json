@@ -1,0 +1,22 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "dotrush.task",
+			"project": "${command:dotrush.activeProjectPath}",
+			"problemMatcher": [],
+			"label": "dotrush: Build"
+		},
+		{
+			"label": "Run (dotnet)",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"run",
+				"--project",
+				"${workspaceFolder}/Test Automation.csproj"
+			],
+			"problemMatcher": "$msCompile"
+		}
+	]
+}
