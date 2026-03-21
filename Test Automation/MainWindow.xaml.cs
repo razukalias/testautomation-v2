@@ -38,7 +38,15 @@ namespace Test_Automation
             "PreviewRequest",
             "PreviewResponse",
             "PreviewVariables",
-            "PreviewLogs"
+            "PreviewLogs",
+            "AssertionPreview",
+            "HttpRequestHeadersPreview",
+            "HttpRequestCookiesPreview",
+            "HttpRequestMetadataPreview",
+            "HttpResponseHeadersPreview",
+            "HttpResponseCookiesPreview",
+            "HttpResponseMetadataPreview",
+            "JsonPreview"
         };
         public ObservableCollection<string> AuthTypeOptions { get; } = new ObservableCollection<string>
         {
@@ -6106,6 +6114,47 @@ namespace Test_Automation
                 return PreviewLogs;
             }
 
+            if (string.Equals(source, "AssertionPreview", StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(source, "Assertions", StringComparison.OrdinalIgnoreCase))
+            {
+                return AssertionPreview;
+            }
+
+            if (string.Equals(source, "HttpRequestHeadersPreview", StringComparison.OrdinalIgnoreCase))
+            {
+                return HttpRequestHeadersPreview;
+            }
+
+            if (string.Equals(source, "HttpRequestCookiesPreview", StringComparison.OrdinalIgnoreCase))
+            {
+                return HttpRequestCookiesPreview;
+            }
+
+            if (string.Equals(source, "HttpRequestMetadataPreview", StringComparison.OrdinalIgnoreCase))
+            {
+                return HttpRequestMetadataPreview;
+            }
+
+            if (string.Equals(source, "HttpResponseHeadersPreview", StringComparison.OrdinalIgnoreCase))
+            {
+                return HttpResponseHeadersPreview;
+            }
+
+            if (string.Equals(source, "HttpResponseCookiesPreview", StringComparison.OrdinalIgnoreCase))
+            {
+                return HttpResponseCookiesPreview;
+            }
+
+            if (string.Equals(source, "HttpResponseMetadataPreview", StringComparison.OrdinalIgnoreCase))
+            {
+                return HttpResponseMetadataPreview;
+            }
+
+            if (string.Equals(source, "JsonPreview", StringComparison.OrdinalIgnoreCase))
+            {
+                return JsonPreview;
+            }
+
             if (string.Equals(source, "PreviewVariables", StringComparison.OrdinalIgnoreCase))
             {
                 // Return variables from last execution as JSON
@@ -7679,6 +7728,14 @@ namespace Test_Automation
             AssertionSourceOptions.Add("PreviewRequest");
             AssertionSourceOptions.Add("PreviewResponse");
             AssertionSourceOptions.Add("PreviewLogs");
+            AssertionSourceOptions.Add("AssertionPreview");
+            AssertionSourceOptions.Add("HttpRequestHeadersPreview");
+            AssertionSourceOptions.Add("HttpRequestCookiesPreview");
+            AssertionSourceOptions.Add("HttpRequestMetadataPreview");
+            AssertionSourceOptions.Add("HttpResponseHeadersPreview");
+            AssertionSourceOptions.Add("HttpResponseCookiesPreview");
+            AssertionSourceOptions.Add("HttpResponseMetadataPreview");
+            AssertionSourceOptions.Add("JsonPreview");
 
             if (SelectedNode == null)
             {

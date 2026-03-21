@@ -90,22 +90,15 @@ namespace Test_Automation.Services
                     componentData.Properties["threadGroupId"] = result.ThreadGroupId;
                 }
 
-                _variableService.ApplyVariableExtractors(component, context, componentData, msg => TraceLog(component, result, msg));
-
-                // Build and attach preview data BEFORE assertions so assertions can extract from preview
-                System.Diagnostics.Debug.WriteLine($"[DEBUG] Building preview data before assertions for component: {component.Name}");
-                TraceLog(component, result, $"[PREVIEW] Building preview data before assertions for component: {component.Name}");
+                // Build and attach preview data BEFORE extraction so extractors can use the visual properties
                 _previewBuilder.BuildAndAttachPreviewData(component, result, context);
 
-                // Log current variables available for assertion extraction
-                System.Diagnostics.Debug.WriteLine($"[DEBUG] Variables available for assertion extraction:");
-                foreach (var var in context.Variables)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG]   Variable: {var.Key} = {var.Value}");
-                    TraceLog(component, result, $"[PREVIEW]   Variable: {var.Key} = {var.Value}");
-                }
+                _variableService.ApplyVariableExtractors(component, context, componentData, msg => TraceLog(component, result, msg), result);
 
-                var assertionResults = await _assertionService.EvaluateAssertionsAsync(component, componentData, context, msg => TraceLog(component, result, msg));
+                // Re-build preview data after extraction to include extracted values in the UI
+                _previewBuilder.BuildAndAttachPreviewData(component, result, context);
+
+                var assertionResults = await _assertionService.EvaluateAssertionsAsync(component, componentData, context, msg => TraceLog(component, result, msg), result);
                 result.AssertionResults = assertionResults;
                 result.AssertFailedCount = assertionResults.Count(item => !item.Passed && IsAssertMode(item.Mode));
                 result.ExpectFailedCount = assertionResults.Count(item => !item.Passed && !IsAssertMode(item.Mode));
@@ -113,8 +106,7 @@ namespace Test_Automation.Services
 
                 TraceLog(component, result, $"[ASSERT] Assertion evaluation complete. Passed: {result.AssertPassedCount}, Failed: {result.AssertFailedCount}");
 
-                // Update preview data with assertion results (so assertion preview is included)
-                TraceLog(component, result, $"[PREVIEW] Building preview data after assertions for component: {component.Name}");
+                // Update preview data one last time with assertion results
                 _previewBuilder.BuildAndAttachPreviewData(component, result, context);
 
                 var stopRequestedByAssertion = assertionResults.Any(item => !item.Passed && IsStopOnAssertFailureMode(item.Mode));

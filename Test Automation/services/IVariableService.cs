@@ -9,6 +9,6 @@ namespace Test_Automation.Services
     {
         Dictionary<string, string> ResolveSettings(Dictionary<string, string> settings, ExecutionContext context);
         List<VariableExtractionRule> ResolveExtractors(List<VariableExtractionRule> extractors, ExecutionContext context);
-        void ApplyVariableExtractors(Componentes.Component component, ExecutionContext context, ComponentData? componentData, System.Action<string> trace);
+        void ApplyVariableExtractors(Componentes.Component component, ExecutionContext context, ComponentData? componentData, System.Action<string> trace, ExecutionResult result);
     }
 }

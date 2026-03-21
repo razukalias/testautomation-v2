@@ -29,7 +29,7 @@ namespace Test_Automation.Services
             )).ToList();
         }
 
-        public List<AssertionEvaluationResult> EvaluateAssertions(Component component, ComponentData? componentData, ExecutionContext context, Action<string> trace)
+        public List<AssertionEvaluationResult> EvaluateAssertions(Component component, ComponentData? componentData, ExecutionContext context, Action<string> trace, ExecutionResult result)
         {
             var results = new List<AssertionEvaluationResult>();
             if (component.Assertions == null || componentData == null)
@@ -75,7 +75,7 @@ namespace Test_Automation.Services
                 {
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Using GetSourceValue for source: {assertion.Source}");
                     trace($"[ASSERT] Using GetSourceValue for source: {assertion.Source}");
-                    sourceValue = GetSourceValue(assertion.Source, componentData);
+                    sourceValue = GetSourceValue(assertion.Source, componentData, result);
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] GetSourceValue returned: {sourceValue}");
                     trace($"[ASSERT] GetSourceValue returned: {sourceValue}");
                 }
@@ -83,7 +83,7 @@ namespace Test_Automation.Services
                 var actualValue = ExtractValue(sourceValue, assertion.JsonPath);
                 var (passed, message) = Compare(actualValue, assertion.Condition, assertion.Expected);
 
-                var result = new AssertionEvaluationResult
+                var evalResult = new AssertionEvaluationResult
                 {
                     Index = index,
                     Passed = passed,
@@ -95,7 +95,7 @@ namespace Test_Automation.Services
                     Expected = assertion.Expected,
                     Actual = ConvertToText(actualValue)
                 };
-                results.Add(result);
+                results.Add(evalResult);
 
                 trace($"Assertion '{assertion.Condition}' on '{assertion.Source}': expected='{assertion.Expected}', actual='{actualValue}'. Passed: {passed}.");
             }
@@ -103,7 +103,7 @@ namespace Test_Automation.Services
             return results;
         }
 
-        public async Task<List<AssertionEvaluationResult>> EvaluateAssertionsAsync(Component component, ComponentData? componentData, ExecutionContext context, Action<string> trace)
+        public async Task<List<AssertionEvaluationResult>> EvaluateAssertionsAsync(Component component, ComponentData? componentData, ExecutionContext context, Action<string> trace, ExecutionResult result)
         {
             var results = new List<AssertionEvaluationResult>();
             if (component.Assertions == null || componentData == null)
@@ -148,7 +148,7 @@ namespace Test_Automation.Services
                 {
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Using GetSourceValue for source: {assertion.Source}");
                     trace($"[ASSERT] Using GetSourceValue for source: {assertion.Source}");
-                    sourceValue = GetSourceValue(assertion.Source, componentData);
+                    sourceValue = GetSourceValue(assertion.Source, componentData, result);
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] GetSourceValue returned: {sourceValue}");
                     trace($"[ASSERT] GetSourceValue returned: {sourceValue}");
                 }
@@ -172,7 +172,7 @@ namespace Test_Automation.Services
                     (passed, message) = Compare(actualValue, assertion.Condition, assertion.Expected);
                 }
 
-                var result = new AssertionEvaluationResult
+                var evalResult = new AssertionEvaluationResult
                 {
                     Index = index,
                     Passed = passed,
@@ -184,7 +184,7 @@ namespace Test_Automation.Services
                     Expected = assertion.Expected,
                     Actual = actualText
                 };
-                results.Add(result);
+                results.Add(evalResult);
 
                 trace($"Assertion '{assertion.Condition}' on '{assertion.Source}': expected='{assertion.Expected}', actual='{actualValue}'. Passed: {passed}.");
             }
@@ -270,7 +270,7 @@ namespace Test_Automation.Services
             }
         }
 
-        private object? GetSourceValue(string source, ComponentData componentData)
+        private object? GetSourceValue(string source, ComponentData componentData, ExecutionResult? result = null)
         {
             // Handle Variable source - this will be resolved using context in EvaluateAssertions
             if (source.StartsWith("Variable.", StringComparison.OrdinalIgnoreCase))
@@ -286,27 +286,253 @@ namespace Test_Automation.Services
             }
 
             // Handle UI source names (PreviewResponse, PreviewRequest, etc.)
-            if (string.Equals(source, "PreviewResponse", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(source, "PreviewResponse", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(source, "Body", StringComparison.OrdinalIgnoreCase))
             {
-                return componentData switch
+                // If we don't have a result yet, return a message matching the UI
+                if (result == null)
                 {
-                    HttpData http => http.ResponseBody,
-                    GraphQlData gql => gql.ResponseBody,
-                    SqlData sql => SerializeQueryResult(sql.QueryResult),
-                    DatasetData dataset => SerializeDatasetRows(dataset.Rows),
-                    _ => null
-                };
+                    return JsonSerializer.Serialize(new { message = "Response will be available after execution." });
+                }
+
+                // Match the UI structure exactly based on component type
+                if (componentData is HttpData http)
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        runs = new[] { new {
+                            threadIndex = result.ThreadIndex,
+                            startTime = result.StartTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                            endTime = result.EndTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                            durationMs = result.DurationMs,
+                            status = result.Status,
+                            responseStatus = http.ResponseStatus,
+                            responseBody = http.ResponseBody
+                        }}
+                    });
+                }
+                
+                if (componentData is GraphQlData gql)
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        runs = new[] { new {
+                            threadIndex = result.ThreadIndex,
+                            startTime = result.StartTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                            endTime = result.EndTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                            durationMs = result.DurationMs,
+                            status = result.Status,
+                            responseStatus = gql.ResponseStatus,
+                            responseBody = gql.ResponseBody
+                        }}
+                    });
+                }
+
+                if (componentData is SqlData sql)
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        runs = new[] { new {
+                            threadIndex = result.ThreadIndex,
+                            startTime = result.StartTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                            endTime = result.EndTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                            durationMs = result.DurationMs,
+                            status = result.Status,
+                            rows = sql.QueryResult
+                        }}
+                    });
+                }
+
+                if (componentData is ForeachData fe)
+                {
+                    // Foreach is unique in UI: shows currentItem directly
+                    return JsonSerializer.Serialize(fe.CurrentItem);
+                }
+
+                if (componentData is ThreadsData th)
+                {
+                    // Threads UI shows childResults
+                    return JsonSerializer.Serialize(new
+                    {
+                        childResults = result.PreviewData?.ChildResults ?? new List<ComponentPreviewData>(),
+                        message = "Last thread results"
+                    });
+                }
+
+                if (componentData is TestPlanData tp)
+                {
+                    // TestPlan UI structure (simplified for current result)
+                    return JsonSerializer.Serialize(new
+                    {
+                        status = tp.Status,
+                        runs = new[] { new {
+                            componentId = result.ComponentId,
+                            componentName = result.ComponentName,
+                            status = result.Status,
+                            response = result.Output
+                        }}
+                    });
+                }
+
+                // Default generic "runs" structure used by Loop, If, Dataset, etc.
+                return JsonSerializer.Serialize(new
+                {
+                    runs = new[] { new {
+                        threadIndex = result.ThreadIndex,
+                        startTime = result.StartTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                        endTime = result.EndTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                        durationMs = result.DurationMs,
+                        status = result.Status,
+                        error = result.Error,
+                        data = componentData
+                    }}
+                });
             }
 
             if (string.Equals(source, "PreviewRequest", StringComparison.OrdinalIgnoreCase))
             {
-                return componentData switch
+                if (result == null)
                 {
-                    HttpData http => http.Body,
-                    GraphQlData gql => gql.Query,
-                    SqlData sql => sql.Query,
-                    _ => null
-                };
+                    return JsonSerializer.Serialize(new { message = "Request will be available after execution." });
+                }
+
+                if (componentData is HttpData http)
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        runs = new[] { new {
+                            threadIndex = result.ThreadIndex,
+                            startTime = result.StartTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                            endTime = result.EndTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                            durationMs = result.DurationMs,
+                            status = result.Status,
+                            method = http.Method,
+                            url = http.Url,
+                            headers = http.Headers,
+                            body = http.Body
+                        }}
+                    });
+                }
+
+                if (componentData is GraphQlData gql)
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        runs = new[] { new {
+                            threadIndex = result.ThreadIndex,
+                            startTime = result.StartTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                            endTime = result.EndTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                            durationMs = result.DurationMs,
+                            status = result.Status,
+                            endpoint = gql.Endpoint,
+                            query = gql.Query,
+                            variables = gql.Variables,
+                            headers = gql.Headers
+                        }}
+                    });
+                }
+
+                // Generic "runs" structure for request
+                return JsonSerializer.Serialize(new
+                {
+                    runs = new[] { new {
+                        threadIndex = result.ThreadIndex,
+                        startTime = result.StartTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                        endTime = result.EndTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                        status = result.Status,
+                        data = componentData
+                    }}
+                });
+            }
+
+            if (string.Equals(source, "JsonPreview", StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(source, "FlowJson", StringComparison.OrdinalIgnoreCase))
+            {
+                return JsonSerializer.Serialize(componentData, new JsonSerializerOptions { WriteIndented = true });
+            }
+
+            if (string.Equals(source, "PreviewLogs", StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(source, "Logs", StringComparison.OrdinalIgnoreCase))
+            {
+                if (result == null) return null;
+                if (!string.IsNullOrEmpty(result.Output)) return result.Output;
+                return string.Join("\n", result.Logs.Select(l => $"[{l.Timestamp:yyyy-MM-dd HH:mm:ss.fff}] {l.Message}"));
+            }
+
+            if (string.Equals(source, "AssertionPreview", StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(source, "Assertions", StringComparison.OrdinalIgnoreCase))
+            {
+                if (result == null) return JsonSerializer.Serialize(new { summary = new { total = 0, passed = 0, failed = 0 }, details = new List<object>() });
+                
+                var passed = result.AssertionResults?.Count(r => r.Passed) ?? 0;
+                var total = result.AssertionResults?.Count ?? 0;
+                var failed = total - passed;
+
+                return JsonSerializer.Serialize(new
+                {
+                    summary = new
+                    {
+                        total,
+                        passed,
+                        assertFailed = result.AssertionResults?.Count(r => !r.Passed && !string.Equals(r.Mode, "Expect", StringComparison.OrdinalIgnoreCase)) ?? 0,
+                        expectFailed = result.AssertionResults?.Count(r => !r.Passed && string.Equals(r.Mode, "Expect", StringComparison.OrdinalIgnoreCase)) ?? 0
+                    },
+                    details = result.AssertionResults
+                }, new JsonSerializerOptions { WriteIndented = true });
+            }
+
+            // HTTP Specific Previews
+            if (string.Equals(source, "HttpRequestHeadersPreview", StringComparison.OrdinalIgnoreCase))
+            {
+                var headers = (componentData as HttpData)?.Headers ?? new Dictionary<string, string>();
+                return JsonSerializer.Serialize(headers, new JsonSerializerOptions { WriteIndented = true });
+            }
+
+            if (string.Equals(source, "HttpRequestCookiesPreview", StringComparison.OrdinalIgnoreCase))
+            {
+                var headers = (componentData as HttpData)?.Headers ?? new Dictionary<string, string>();
+                return JsonSerializer.Serialize(ExtractCookiesFromHeaders(headers, "Cookie"), new JsonSerializerOptions { WriteIndented = true });
+            }
+
+            if (string.Equals(source, "HttpRequestMetadataPreview", StringComparison.OrdinalIgnoreCase))
+            {
+                var http = componentData as HttpData;
+                return JsonSerializer.Serialize(new
+                {
+                    method = http?.Method,
+                    url = http?.Url,
+                    status = result?.Status,
+                    durationMs = result?.DurationMs,
+                    threadIndex = result?.ThreadIndex,
+                    startTime = result?.StartTime,
+                    endTime = result?.EndTime
+                }, new JsonSerializerOptions { WriteIndented = true });
+            }
+
+            if (string.Equals(source, "HttpResponseHeadersPreview", StringComparison.OrdinalIgnoreCase))
+            {
+                var headers = (componentData as HttpData)?.ResponseHeaders ?? new Dictionary<string, string>();
+                return JsonSerializer.Serialize(headers, new JsonSerializerOptions { WriteIndented = true });
+            }
+
+            if (string.Equals(source, "HttpResponseCookiesPreview", StringComparison.OrdinalIgnoreCase))
+            {
+                var headers = (componentData as HttpData)?.ResponseHeaders ?? new Dictionary<string, string>();
+                return JsonSerializer.Serialize(ExtractCookiesFromHeaders(headers, "Set-Cookie"), new JsonSerializerOptions { WriteIndented = true });
+            }
+
+            if (string.Equals(source, "HttpResponseMetadataPreview", StringComparison.OrdinalIgnoreCase))
+            {
+                var http = componentData as HttpData;
+                return JsonSerializer.Serialize(new
+                {
+                    status = result?.Status,
+                    httpStatus = http?.ResponseStatus,
+                    bodyLength = (http?.ResponseBody ?? string.Empty).Length,
+                    durationMs = result?.DurationMs,
+                    threadIndex = result?.ThreadIndex,
+                    error = result?.Error
+                }, new JsonSerializerOptions { WriteIndented = true });
             }
 
             // Handle Dataset-specific source
@@ -320,32 +546,38 @@ namespace Test_Automation.Services
                 return null;
             }
 
-            if (string.Equals(source, "Body", StringComparison.OrdinalIgnoreCase))
-            {
-                return componentData switch
-                {
-                    HttpData http => http.ResponseBody,
-                    GraphQlData gql => gql.ResponseBody,
-                    _ => null
-                };
-            }
-
             if (string.Equals(source, "Status", StringComparison.OrdinalIgnoreCase))
             {
                 return componentData switch
                 {
-                    HttpData http => http.ResponseStatus,
-                    GraphQlData gql => gql.ResponseStatus,
+                    HttpData http => http.ResponseStatus?.ToString(),
+                    GraphQlData gql => gql.ResponseStatus?.ToString(),
+                    IfData ifd => ifd.ConditionMet.ToString(),
+                    TestPlanData tp => tp.Status,
                     _ => null
                 };
             }
             
-            if (componentData.Properties.TryGetValue(source, out var propValue))
+            if (componentData != null && componentData.Properties.TryGetValue(source, out var propValue))
             {
                 return propValue;
             }
 
             return null;
+        }
+
+        private static List<string> ExtractCookiesFromHeaders(Dictionary<string, string> headers, string cookieHeaderName)
+        {
+            if (headers == null || !headers.TryGetValue(cookieHeaderName, out var cookieHeader) || string.IsNullOrWhiteSpace(cookieHeader))
+            {
+                return new List<string>();
+            }
+
+            return cookieHeader
+                .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                .Select(cookie => cookie.Trim())
+                .Where(cookie => !string.IsNullOrWhiteSpace(cookie))
+                .ToList();
         }
 
         private string SerializeQueryResult(List<Dictionary<string, object>>? queryResult)
