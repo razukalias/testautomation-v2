@@ -153,7 +153,8 @@ namespace Test_Automation
         private string _previewLogs = "Logs will appear here.";
         private string _variablesPreview = "{}";
         private string _assertionPreview = "Select a component to see assertion preview.";
-        private string _runtimeTraceLogBuffer = string.Empty;
+        private readonly System.Collections.Concurrent.ConcurrentQueue<Test_Automation.Models.TraceEventArgs> _logQueue = new();
+        private System.Windows.Threading.DispatcherTimer? _logFlushTimer;
         private Test_Automation.Models.ExecutionContext? _lastExecutionContext;
         private Test_Automation.Models.ExecutionContext? _activeExecutionContext;
         private readonly List<Test_Automation.Models.ExecutionContext> _activeProjectExecutionContexts = new();
@@ -1515,6 +1516,9 @@ namespace Test_Automation
         public MainWindow()
         {
             InitializeComponent();
+            _logFlushTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+            _logFlushTimer.Tick += LogFlushTimer_Tick;
+            _logFlushTimer.Start();
             DataContext = this;
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
@@ -2032,7 +2036,7 @@ namespace Test_Automation
             var executor = CreateExecutorWithHighlight();
             var runner = new TestPlanRunner(executor);
             var startTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-            _runtimeTraceLogBuffer = string.Empty;
+
             PreviewLogs = $"[{startTimestamp}] Running TestPlan: {testPlanNode.Name}";
             VariablesPreview = "{}";
 
@@ -2169,7 +2173,7 @@ namespace Test_Automation
                 ? "Parallel"
                 : "Sequence";
             var startTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-            _runtimeTraceLogBuffer = string.Empty;
+
             PreviewLogs = $"[{startTimestamp}] Running {runnablePlans.Count} TestPlan(s) in {mode} mode.";
             VariablesPreview = "{}";
 
@@ -2487,7 +2491,7 @@ namespace Test_Automation
 
             var executor = CreateExecutorWithHighlight();
             var startTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-            _runtimeTraceLogBuffer = string.Empty;
+
             PreviewLogs = $"[{startTimestamp}] Running: {selectedNode.Name}";
             VariablesPreview = "{}";
 
@@ -2889,43 +2893,41 @@ namespace Test_Automation
             var executor = new ComponentExecutor();
             executor.ComponentStarted += result => _ = SetNodeHighlightAsync(result.ComponentId, true);
             executor.ComponentCompleted += result => _ = HandleComponentCompletedAsync(result);
-            executor.Trace += message => _ = AppendRuntimeLogAsync(message);
+            executor.Trace += args => AppendRuntimeLogAsync(args);
             return executor;
         }
 
-        private async Task AppendRuntimeLogAsync(string message)
+                private void AppendRuntimeLogAsync(Test_Automation.Models.TraceEventArgs args)
         {
-            if (string.IsNullOrWhiteSpace(message))
+            _logQueue.Enqueue(args);
+        }
+
+        private void LogFlushTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_logQueue.IsEmpty) return;
+            var sb = new System.Text.StringBuilder();
+            bool hasValidLogs = false;
+            
+            while (_logQueue.TryDequeue(out var log))
             {
-                return;
+                if (string.Equals(SelectedTraceLevel, "Errors", StringComparison.OrdinalIgnoreCase) && log.Level != Test_Automation.Models.TraceLevel.Error) continue;
+                if (string.Equals(SelectedTraceLevel, "Off", StringComparison.OrdinalIgnoreCase)) continue;
+                
+                var time = log.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
+                sb.AppendLine($"[{time}] {log.Message}");
+                hasValidLogs = true;
             }
 
-            if (string.Equals(SelectedTraceLevel, "Off", StringComparison.OrdinalIgnoreCase))
+            if (!hasValidLogs) return;
+
+            if (string.IsNullOrWhiteSpace(PreviewLogs) || string.Equals(PreviewLogs, "Logs will appear here.", StringComparison.Ordinal) || PreviewLogs.Contains("No logs available"))
             {
-                return;
+                PreviewLogs = sb.ToString();
             }
-
-            if (string.Equals(SelectedTraceLevel, "Errors", StringComparison.OrdinalIgnoreCase)
-                && !IsErrorTraceMessage(message))
+            else
             {
-                return;
+                PreviewLogs += sb.ToString();
             }
-
-            await Dispatcher.InvokeAsync(() =>
-            {
-                var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                var line = $"[{now}] {message}";
-                _runtimeTraceLogBuffer = string.IsNullOrWhiteSpace(_runtimeTraceLogBuffer)
-                    ? line
-                    : string.Join("\n", new[] { _runtimeTraceLogBuffer, line });
-                if (string.IsNullOrWhiteSpace(PreviewLogs) || string.Equals(PreviewLogs, "Logs will appear here.", StringComparison.Ordinal))
-                {
-                    PreviewLogs = line;
-                    return;
-                }
-
-                PreviewLogs = string.Join("\n", new[] { PreviewLogs, line });
-            });
         }
 
         private static bool IsErrorTraceMessage(string message)
@@ -2942,22 +2944,46 @@ namespace Test_Automation
                 || message.Contains("missing", StringComparison.OrdinalIgnoreCase);
         }
 
-        private void AppendRuntimeTraceBufferToPreviewLogs()
+                private void AppendRuntimeTraceBufferToPreviewLogs()
         {
-            if (string.IsNullOrWhiteSpace(_runtimeTraceLogBuffer))
+        }
+
+        private void RebuildPreviewLogsForSelectedNode()
+        {
+            if (SelectedNode == null) 
             {
+                PreviewLogs = "Logs will appear here.";
                 return;
             }
-
-            if (string.IsNullOrWhiteSpace(PreviewLogs) || string.Equals(PreviewLogs, "Logs will appear here.", StringComparison.Ordinal))
+            
+            var results = string.Equals(SelectedPreviewDataMode, "Full History", StringComparison.OrdinalIgnoreCase) 
+                ? GetExecutionResultsForScope(SelectedNode) 
+                : FilterPreviewResults(GetExecutionResultsForScope(SelectedNode), lastPerComponent: true);
+                
+            var sb = new System.Text.StringBuilder();
+            var allLogs = results
+                .SelectMany(r => r.Logs ?? System.Linq.Enumerable.Empty<Test_Automation.Models.TraceEventArgs>())
+                .OrderBy(l => l.Timestamp)
+                .ToList();
+                
+            foreach (var log in allLogs)
             {
-                PreviewLogs = _runtimeTraceLogBuffer;
-                return;
+                if (string.Equals(SelectedTraceLevel, "Errors", StringComparison.OrdinalIgnoreCase) && log.Level != Test_Automation.Models.TraceLevel.Error) continue;
+                if (string.Equals(SelectedTraceLevel, "Off", StringComparison.OrdinalIgnoreCase)) continue;
+                var time = log.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
+                sb.AppendLine($"[{time}] {log.Message}");
             }
-
-            if (!PreviewLogs.Contains(_runtimeTraceLogBuffer, StringComparison.Ordinal))
+            
+            var traceHistory = sb.Length > 0 ? sb.ToString() : "No trace history available for this component in the current Trace Level / History Mode.";
+            
+            if (string.IsNullOrWhiteSpace(PreviewLogs) || PreviewLogs.StartsWith("Logs will appear here.") || PreviewLogs.Contains("No trace history"))
             {
-                PreviewLogs = string.Join("\n", new[] { PreviewLogs, _runtimeTraceLogBuffer });
+                PreviewLogs = traceHistory;
+            }
+            else
+            {
+                var prefix = PreviewLogs.Split(new[] { "\n\n=== Trace History ===" }, StringSplitOptions.None)[0];
+                PreviewLogs = prefix + "\n\n=== Trace History ===\n" + traceHistory;
             }
         }
 
@@ -4453,6 +4479,7 @@ namespace Test_Automation
 
                     PreviewLogs = $"[{now}] HTTP preview refreshed\n[{now}] Target: {method} {url}\n[{now}] Last run failed: {latestHttpExecution.Error}";
                     AppendExtractionPreview(now);
+                    RebuildPreviewLogsForSelectedNode();
                     return;
                 }
 
@@ -4534,6 +4561,7 @@ namespace Test_Automation
 
                 PreviewLogs = $"[{now}] HTTP preview refreshed\n[{now}] Target: {method} {url}";
                 AppendExtractionPreview(now);
+                RebuildPreviewLogsForSelectedNode();
                 return;
             }
 
@@ -4601,6 +4629,7 @@ namespace Test_Automation
 
                     PreviewLogs = $"[{now}] GraphQL preview refreshed\n[{now}] Endpoint: {endpoint}\n[{now}] Last run failed: {latestGraphExecution.Error}";
                     AppendExtractionPreview(now);
+                    RebuildPreviewLogsForSelectedNode();
                     return;
                 }
 
@@ -4650,6 +4679,7 @@ namespace Test_Automation
 
                 PreviewLogs = $"[{now}] GraphQL preview refreshed\n[{now}] Endpoint: {endpoint}";
                 AppendExtractionPreview(now);
+                RebuildPreviewLogsForSelectedNode();
                 return;
             }
 
@@ -4715,6 +4745,7 @@ namespace Test_Automation
 
                     PreviewLogs = $"[{now}] SQL preview refreshed\n[{now}] Executing: {query}\n[{now}] Last run failed: {latestSqlExecution.Error}";
                     AppendExtractionPreview(now);
+                    RebuildPreviewLogsForSelectedNode();
                     return;
                 }
 
@@ -4765,6 +4796,7 @@ namespace Test_Automation
 
                 PreviewLogs = $"[{now}] SQL preview refreshed\n[{now}] Executing: {query}";
                 AppendExtractionPreview(now);
+                RebuildPreviewLogsForSelectedNode();
                 return;
             }
 
@@ -4808,6 +4840,7 @@ namespace Test_Automation
 
                 PreviewLogs = $"[{now}] Threads preview refreshed\n[{now}] ThreadCount: {threadCount}, RampUpSeconds: {rampUp}";
                 AppendExtractionPreview(now);
+                RebuildPreviewLogsForSelectedNode();
                 return;
             }
 
@@ -4868,6 +4901,7 @@ namespace Test_Automation
 
                     PreviewLogs = $"[{now}] Script preview refreshed\n[{now}] Last run failed: {latestScriptExecution.Error}";
                     AppendExtractionPreview(now);
+                    RebuildPreviewLogsForSelectedNode();
                     return;
                 }
 
@@ -4908,6 +4942,7 @@ namespace Test_Automation
 
                 PreviewLogs = $"[{now}] Script preview refreshed";
                 AppendExtractionPreview(now);
+                RebuildPreviewLogsForSelectedNode();
                 return;
             }
 
@@ -4956,6 +4991,7 @@ namespace Test_Automation
 
                 PreviewLogs = $"[{now}] Foreach preview refreshed\n[{now}] Source: {sourceVariable}\n[{now}] Output: {effectiveOutputVar}\n[{now}] Current index: {currentIndex}\n[{now}] Total items: {collection.Count}";
                 AppendExtractionPreview(now);
+                RebuildPreviewLogsForSelectedNode();
                 return;
             }
 
@@ -5003,6 +5039,7 @@ namespace Test_Automation
 
                 PreviewLogs = $"[{now}] {nodeType} preview refreshed.\n[{now}] Last run failed: {latestGenericExecution.Error}";
                 AppendExtractionPreview(now);
+                RebuildPreviewLogsForSelectedNode();
                 return;
             }
 
@@ -5203,6 +5240,7 @@ namespace Test_Automation
                     $"[{timestamp}] No component executions found for this TestPlan.",
                     $"[{timestamp}] Run this TestPlan or use Project run to populate assertions/results."
                 });
+                RebuildPreviewLogsForSelectedNode();
                 return;
             }
 
@@ -5220,6 +5258,7 @@ namespace Test_Automation
 
             PreviewLogs = string.Join("\n", logLines);
             AppendExtractionPreview(timestamp);
+            RebuildPreviewLogsForSelectedNode();
         }
 
         private void PopulateProjectPreview(string timestamp, string nodeName)
@@ -5536,6 +5575,7 @@ namespace Test_Automation
                     $"[{timestamp}] No component executions found yet.",
                     $"[{timestamp}] Run using 'Run TestPlans' to see combined trace across all TestPlans."
                 });
+                RebuildPreviewLogsForSelectedNode();
                 return;
             }
 
@@ -5552,6 +5592,7 @@ namespace Test_Automation
 
             PreviewLogs = string.Join("\n", logLines);
             AppendExtractionPreview(timestamp);
+            RebuildPreviewLogsForSelectedNode();
         }
 
         private static (int AssertFailed, int ExpectFailed, int Passed) BuildAssertionSummary(IEnumerable<ExecutionResult> results)
@@ -5861,7 +5902,7 @@ namespace Test_Automation
         private void ClearLogsButton_Click(object sender, RoutedEventArgs e)
         {
             PreviewLogs = string.Empty;
-            _runtimeTraceLogBuffer = string.Empty;
+
         }
 
         private void ClearVariablesButton_Click(object sender, RoutedEventArgs e)
@@ -8538,4 +8579,7 @@ namespace Test_Automation
         }
     }
 }
+
+
+
 
