@@ -211,7 +211,7 @@ namespace Test_Automation
                 ScriptText,
                 context,
                 actual: string.Empty,
-                trace: message => AppendLog($"script: {message}"));
+                trace: (message, level) => AppendLog($"script ({level}): {message}"));
 
             if (outcome.Success)
             {
@@ -427,6 +427,7 @@ namespace Test_Automation
             sb.AppendLine("- VarText(\"name\"): read variable as string");
             sb.AppendLine("- SetVar(\"name\", value): create/update variable");
             sb.AppendLine("- log(\"message\"): write a line into the editor output panel");
+            sb.AppendLine("- logVerbose(\"message\"): write a line into the editor output panel (verbose mode)");
             sb.AppendLine("- actual / Actual: current assertion actual value (for script assertions)");
             sb.AppendLine("- actualNumber / ActualNumber: parsed numeric actual when possible");
             sb.AppendLine();

@@ -35,18 +35,9 @@ namespace Test_Automation
         public ObservableCollection<string> AssertionSourceOptions { get; } = new ObservableCollection<string>();
         private static readonly string[] BaseExtractorSources =
         {
-            "PreviewRequest",
             "PreviewResponse",
-            "PreviewVariables",
-            "PreviewLogs",
-            "AssertionPreview",
-            "HttpRequestHeadersPreview",
-            "HttpRequestCookiesPreview",
-            "HttpRequestMetadataPreview",
-            "HttpResponseHeadersPreview",
-            "HttpResponseCookiesPreview",
-            "HttpResponseMetadataPreview",
-            "JsonPreview"
+            "PreviewRequest",
+            "PreviewVariables"
         };
         public ObservableCollection<string> AuthTypeOptions { get; } = new ObservableCollection<string>
         {
@@ -89,6 +80,7 @@ namespace Test_Automation
         {
             "Off",
             "Errors",
+            "Component Execution",
             "Verbose"
         };
 
@@ -141,7 +133,7 @@ namespace Test_Automation
 
         private PlanNode? _selectedNode;
         private string _selectedEnvironment = string.Empty;
-        private string _selectedTraceLevel = "Verbose";
+        private string _selectedTraceLevel = "Component Execution";
         private bool _isSyncingEnvironment;
         private bool _isRefreshingEnvironmentOptions;
         private bool _isNormalizingVariables;
@@ -811,7 +803,7 @@ namespace Test_Automation
             get => _selectedTraceLevel;
             set
             {
-                var normalized = TraceLevelOptions.Contains(value) ? value : "Verbose";
+                var normalized = TraceLevelOptions.Contains(value) ? value : "Component Execution";
                 if (string.Equals(_selectedTraceLevel, normalized, StringComparison.Ordinal))
                 {
                     return;
@@ -2990,6 +2982,7 @@ namespace Test_Automation
             {
                 if (string.Equals(SelectedTraceLevel, "Errors", StringComparison.OrdinalIgnoreCase) && log.Level != Test_Automation.Models.TraceLevel.Error) continue;
                 if (string.Equals(SelectedTraceLevel, "Off", StringComparison.OrdinalIgnoreCase)) continue;
+                if (string.Equals(SelectedTraceLevel, "Component Execution", StringComparison.OrdinalIgnoreCase) && log.Level == Test_Automation.Models.TraceLevel.Verbose) continue;
                 
                 var time = log.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
                 sb.AppendLine($"[{time}] {log.Message}");
@@ -3048,6 +3041,8 @@ namespace Test_Automation
             {
                 if (string.Equals(SelectedTraceLevel, "Errors", StringComparison.OrdinalIgnoreCase) && log.Level != Test_Automation.Models.TraceLevel.Error) continue;
                 if (string.Equals(SelectedTraceLevel, "Off", StringComparison.OrdinalIgnoreCase)) continue;
+                if (string.Equals(SelectedTraceLevel, "Component Execution", StringComparison.OrdinalIgnoreCase) && log.Level == Test_Automation.Models.TraceLevel.Verbose) continue;
+
                 var time = log.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
                 sb.AppendLine($"[{time}] {log.Message}");
             }
@@ -7631,36 +7626,14 @@ namespace Test_Automation
         {
             ExtractorSourceOptions.Clear();
 
+            // Only add base sources - simplified to core options for all components
             foreach (var source in BaseExtractorSources)
             {
                 ExtractorSourceOptions.Add(source);
             }
 
-            // Add Variables option to indicate selecting from variables
-            ExtractorSourceOptions.Add("Variable");
-
-            if (SelectedNode == null)
-            {
-                return;
-            }
-
-            // Add settings keys as sources
-            var keys = SelectedNode.Settings
-                .Select(setting => setting.Key)
-                .Where(key => !string.IsNullOrWhiteSpace(key))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(key => key, StringComparer.OrdinalIgnoreCase);
-
-            foreach (var key in keys)
-            {
-                if (!ExtractorSourceOptions.Contains(key))
-                {
-                    ExtractorSourceOptions.Add(key);
-                }
-            }
-
-            // Add variables from current node and parent nodes
-            AddVariablesToSourceOptions(SelectedNode);
+            // Removed: Variable option, settings keys, and node variables
+            // Now showing only: PreviewResponse, PreviewRequest, PreviewVariables
 
             RefreshAssertionJsonTreePanel();
         }
@@ -7723,19 +7696,10 @@ namespace Test_Automation
         {
             AssertionSourceOptions.Clear();
 
-            // Add base sources
+            // Add base sources - simplified to core options for all components
             AssertionSourceOptions.Add("PreviewVariables");
             AssertionSourceOptions.Add("PreviewRequest");
             AssertionSourceOptions.Add("PreviewResponse");
-            AssertionSourceOptions.Add("PreviewLogs");
-            AssertionSourceOptions.Add("AssertionPreview");
-            AssertionSourceOptions.Add("HttpRequestHeadersPreview");
-            AssertionSourceOptions.Add("HttpRequestCookiesPreview");
-            AssertionSourceOptions.Add("HttpRequestMetadataPreview");
-            AssertionSourceOptions.Add("HttpResponseHeadersPreview");
-            AssertionSourceOptions.Add("HttpResponseCookiesPreview");
-            AssertionSourceOptions.Add("HttpResponseMetadataPreview");
-            AssertionSourceOptions.Add("JsonPreview");
 
             if (SelectedNode == null)
             {
@@ -7760,42 +7724,8 @@ namespace Test_Automation
                 current = current.Parent;
             }
 
-            // Collect variables: Project (global) + TestPlan (local)
-            var variables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            // Add global variables from Project
-            if (projectNode != null)
-            {
-                foreach (var variable in projectNode.Variables)
-                {
-                    if (!string.IsNullOrWhiteSpace(variable.Key))
-                    {
-                        variables.Add(variable.Key);
-                    }
-                }
-            }
-
-            // Add local variables from TestPlan
-            if (testPlanNode != null)
-            {
-                foreach (var variable in testPlanNode.Variables)
-                {
-                    if (!string.IsNullOrWhiteSpace(variable.Key))
-                    {
-                        variables.Add(variable.Key);
-                    }
-                }
-            }
-
-            // Add collected variables with "Variable." prefix
-            foreach (var varName in variables.OrderBy(v => v, StringComparer.OrdinalIgnoreCase))
-            {
-                var varSource = $"Variable.{varName}";
-                if (!AssertionSourceOptions.Contains(varSource))
-                {
-                    AssertionSourceOptions.Add(varSource);
-                }
-            }
+            // Removed: variable options added from Project and TestPlan
+            // Now showing only: PreviewVariables, PreviewRequest, PreviewResponse
         }
 
         private void AddExtractorButton_Click(object sender, RoutedEventArgs e)

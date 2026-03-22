@@ -7,8 +7,8 @@ namespace Test_Automation.Services
 {
     public interface IVariableService
     {
-        Dictionary<string, string> ResolveSettings(Dictionary<string, string> settings, ExecutionContext context);
-        List<VariableExtractionRule> ResolveExtractors(List<VariableExtractionRule> extractors, ExecutionContext context);
-        void ApplyVariableExtractors(Componentes.Component component, ExecutionContext context, ComponentData? componentData, System.Action<string> trace, ExecutionResult result);
+        Dictionary<string, string> ResolveSettings(Dictionary<string, string> settings, ExecutionContext context, System.Action<string, TraceLevel>? trace = null);
+        List<VariableExtractionRule> ResolveExtractors(List<VariableExtractionRule> extractors, ExecutionContext context, System.Action<string, TraceLevel>? trace = null);
+        void ApplyVariableExtractors(Componentes.Component component, ExecutionContext context, ComponentData? componentData, System.Action<string, TraceLevel> trace, ExecutionResult result);
     }
 }

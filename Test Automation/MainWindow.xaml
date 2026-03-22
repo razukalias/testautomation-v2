@@ -1341,10 +1341,10 @@
                                     </ScrollViewer>
                                 </TabItem>
 
-                                <TabItem Header="Extract Variables">
+                                <TabItem Header="Assign Value to Variable">
                     <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8">
                         <StackPanel>
-                            <TextBlock Text="Extract Variables" FontWeight="SemiBold" Margin="0,0,0,6" />
+                            <TextBlock Text="Assign Value to Variable" FontWeight="SemiBold" Margin="0,0,0,6" />
 
                             <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>

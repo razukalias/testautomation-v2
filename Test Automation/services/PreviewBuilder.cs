@@ -4,6 +4,7 @@ using System.Linq;
 using Test_Automation.Componentes;
 using Test_Automation.Models;
 using ExecutionContext = Test_Automation.Models.ExecutionContext;
+using LogLevel = Test_Automation.Services.LogLevel;
 
 namespace Test_Automation.Services
 {
@@ -17,10 +18,12 @@ namespace Test_Automation.Services
         /// </summary>
         public void BuildAndAttachPreviewData(Component component, ExecutionResult result, ExecutionContext context)
         {
-            System.Diagnostics.Debug.WriteLine($"[PREVIEW] Building preview for component: {component.Name}, Type: {component.GetType().Name}");
+            Logger.Log($"Building preview for component: {component.Name}, Type: {component.GetType().Name}",
+                LogLevel.Verbose, componentId: component.Id, componentName: component.Name, executionId: result.ExecutionId);
             var previewData = CreatePreviewData(component, result, context);
             result.PreviewData = previewData;
-            System.Diagnostics.Debug.WriteLine($"[PREVIEW] Preview data built for: {component.Name}, Data Type: {result.Data?.GetType().Name ?? "null"}");
+            Logger.Log($"Preview data built for: {component.Name}, Data Type: {result.Data?.GetType().Name ?? "null"}",
+                LogLevel.Verbose, componentId: component.Id, componentName: component.Name, executionId: result.ExecutionId);
         }
 
         /// <summary>

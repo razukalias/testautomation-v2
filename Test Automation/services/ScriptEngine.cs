@@ -44,7 +44,7 @@ namespace Test_Automation.Services
             string code,
             Test_Automation.Models.ExecutionContext context,
             string? actual = null,
-            Action<string>? trace = null)
+            Action<string, TraceLevel>? trace = null)
         {
             if (!string.Equals(language, "CSharp", StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(language, "csharp", StringComparison.OrdinalIgnoreCase))
@@ -211,14 +211,14 @@ namespace Test_Automation.Services
     public sealed class ScriptGlobals
     {
         private readonly Test_Automation.Models.ExecutionContext _context;
-        private readonly Action<string>? _trace;
+        private readonly Action<string, TraceLevel>? _trace;
         public IReadOnlyDictionary<string, object> Vars { get; }
         public string Actual { get; }
         public double? ActualNumber { get; }
         public string actual => Actual;
         public double? actualNumber => ActualNumber;
 
-        public ScriptGlobals(Test_Automation.Models.ExecutionContext context, string? actual, Action<string>? trace = null)
+        public ScriptGlobals(Test_Automation.Models.ExecutionContext context, string? actual, Action<string, TraceLevel>? trace = null)
         {
             _context = context ?? new Test_Automation.Models.ExecutionContext();
             _trace = trace;
@@ -274,12 +274,22 @@ namespace Test_Automation.Services
 
         public void log(string message)
         {
-            _trace?.Invoke(message ?? string.Empty);
+            _trace?.Invoke(message ?? string.Empty, TraceLevel.Info);
+        }
+
+        public void logVerbose(string message)
+        {
+            _trace?.Invoke(message ?? string.Empty, TraceLevel.Verbose);
         }
 
         public void Log(string message)
         {
             log(message);
+        }
+
+        public void LogVerbose(string message)
+        {
+            logVerbose(message);
         }
     }
 }

@@ -274,6 +274,9 @@ namespace Test_Automation.Models
         [JsonPropertyName("threadGroupId")]
         public string ThreadGroupId { get; set; } = string.Empty;
 
+        [JsonPropertyName("executionId")]
+        public string ExecutionId { get; set; } = string.Empty;
+
         [JsonPropertyName("assertions")]
         public List<AssertionEvaluationResult> AssertionResults { get; set; } = new List<AssertionEvaluationResult>();
 

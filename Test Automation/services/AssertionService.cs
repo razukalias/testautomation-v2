@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -13,35 +14,41 @@ namespace Test_Automation.Services
 {
     public class AssertionService : IAssertionService
     {
-        public List<AssertionRule> ResolveAssertions(List<AssertionRule> assertions, ExecutionContext context)
+        public List<AssertionRule> ResolveAssertions(List<AssertionRule> assertions, ExecutionContext context, Action<string, TraceLevel>? trace = null)
         {
+            TraceFunction(trace, $"assertionsCount={assertions?.Count ?? 0}");
             if (assertions == null || assertions.Count == 0)
             {
+                TraceFunction(trace, output: "EmptyList");
                 return new List<AssertionRule>();
             }
 
-            return assertions.Select(a => new AssertionRule(
+            var resolved = assertions.Select(a => new AssertionRule(
                 a.Source,
                 a.JsonPath,
                 a.Condition,
-                ResolveText(a.Expected, context),
+                ResolveText(a.Expected, context, trace),
                 a.Mode
             )).ToList();
+            TraceFunction(trace, output: $"ResolvedList(count={resolved.Count})");
+            return resolved;
         }
 
-        public List<AssertionEvaluationResult> EvaluateAssertions(Component component, ComponentData? componentData, ExecutionContext context, Action<string> trace, ExecutionResult result)
+        public List<AssertionEvaluationResult> EvaluateAssertions(Component component, ComponentData? componentData, ExecutionContext context, Action<string, TraceLevel> trace, ExecutionResult result)
         {
+            TraceFunction(trace, $"component={component?.Name}, hasData={componentData != null}");
             var results = new List<AssertionEvaluationResult>();
-            if (component.Assertions == null || componentData == null)
+            if (component == null || component.Assertions == null || componentData == null)
             {
+                TraceFunction(trace, output: "Skipped (missing component, assertions or data)");
                 return results;
             }
 
-            trace($"Evaluating {component.Assertions.Count} assertions for {component.Name}.");
+            trace($"Evaluating {component.Assertions?.Count ?? 0} assertions for {component.Name}.", TraceLevel.Info);
 
-            for (var index = 0; index < component.Assertions.Count; index++)
+            for (var index = 0; index < (component.Assertions?.Count ?? 0); index++)
             {
-                var assertion = component.Assertions[index];
+                var assertion = component.Assertions![index];
                 
                 // Handle Variable source - get value from context
                 object? sourceValue;
@@ -50,7 +57,7 @@ namespace Test_Automation.Services
                     var varName = assertion.Source.Substring("Variable.".Length);
                     sourceValue = context.GetVariable(varName);
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Variable.{varName} = {sourceValue}");
-                    trace($"[ASSERT] Assertion source Variable.{varName} = {sourceValue}");
+                    trace($"[ASSERT] Assertion source Variable.{varName} = {sourceValue}", TraceLevel.Info);
                 }
                 else if (assertion.Source.StartsWith("PreviewVariables.", StringComparison.OrdinalIgnoreCase))
                 {
@@ -59,8 +66,8 @@ namespace Test_Automation.Services
                     sourceValue = context.GetVariable(varName);
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] PreviewVariables.{varName} = {sourceValue}");
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Context has variable '{varName}': {context.HasVariable(varName)}");
-                    trace($"[ASSERT] Assertion source PreviewVariables.{varName} = {sourceValue}");
-                    trace($"[ASSERT] Checking context for variable '{varName}': {context.HasVariable(varName)}");
+                    trace($"[ASSERT] Assertion source PreviewVariables.{varName} = {sourceValue}", TraceLevel.Info);
+                    trace($"[ASSERT] Checking context for variable '{varName}': {context.HasVariable(varName)}", TraceLevel.Info);
                 }
                 else if (string.Equals(assertion.Source, "PreviewVariables", StringComparison.OrdinalIgnoreCase))
                 {
@@ -69,15 +76,14 @@ namespace Test_Automation.Services
                     var variables = context.GetAllVariablesForPreview();
                     sourceValue = System.Text.Json.JsonSerializer.Serialize(variables);
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] PreviewVariables JSON = {sourceValue}");
-                    trace($"[ASSERT] Assertion source PreviewVariables = {sourceValue}");
+                    trace($"[ASSERT] Assertion source PreviewVariables = {sourceValue}", TraceLevel.Info);
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Using GetSourceValue for source: {assertion.Source}");
-                    trace($"[ASSERT] Using GetSourceValue for source: {assertion.Source}");
+                    trace($"[ASSERT] Using GetSourceValue for source: {assertion.Source}", TraceLevel.Info);
                     sourceValue = GetSourceValue(assertion.Source, componentData, result);
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] GetSourceValue returned: {sourceValue}");
-                    trace($"[ASSERT] GetSourceValue returned: {sourceValue}");
+                    trace($"[VERBOSE] GetSourceValue result type: {sourceValue?.GetType().Name ?? "null"}", TraceLevel.Verbose);
+                    trace($"[ASSERT] GetSourceValue returned: {sourceValue}", TraceLevel.Info);
                 }
                 
                 var actualValue = ExtractValue(sourceValue, assertion.JsonPath);
@@ -92,30 +98,32 @@ namespace Test_Automation.Services
                     Source = assertion.Source,
                     JsonPath = assertion.JsonPath,
                     Condition = assertion.Condition,
-                    Expected = assertion.Expected,
+                    Expected = assertion.Expected ?? string.Empty,
                     Actual = ConvertToText(actualValue)
                 };
                 results.Add(evalResult);
 
-                trace($"Assertion '{assertion.Condition}' on '{assertion.Source}': expected='{assertion.Expected}', actual='{actualValue}'. Passed: {passed}.");
+                trace($"Assertion '{assertion.Condition}' on '{assertion.Source}': expected='{assertion.Expected}', actual='{actualValue}'. Passed: {passed}.", TraceLevel.Info);
             }
-
+            TraceFunction(trace, output: $"Completed({results.Count})");
             return results;
         }
 
-        public async Task<List<AssertionEvaluationResult>> EvaluateAssertionsAsync(Component component, ComponentData? componentData, ExecutionContext context, Action<string> trace, ExecutionResult result)
+        public async Task<List<AssertionEvaluationResult>> EvaluateAssertionsAsync(Component component, ComponentData? componentData, ExecutionContext context, Action<string, TraceLevel> trace, ExecutionResult result)
         {
+            TraceFunction(trace, $"component={component?.Name}, hasData={componentData != null}");
             var results = new List<AssertionEvaluationResult>();
-            if (component.Assertions == null || componentData == null)
+            if (component == null || component.Assertions == null || componentData == null)
             {
+                TraceFunction(trace, output: "Skipped (missing component, assertions or data)");
                 return results;
             }
 
-            trace($"Evaluating {component.Assertions.Count} assertions for {component.Name}.");
+            trace($"Evaluating {component.Assertions?.Count ?? 0} assertions for {component.Name}.", TraceLevel.Info);
 
-            for (var index = 0; index < component.Assertions.Count; index++)
+            for (var index = 0; index < (component.Assertions?.Count ?? 0); index++)
             {
-                var assertion = component.Assertions[index];
+                var assertion = component.Assertions![index];
                 
                 // Handle Variable source - get value from context
                 object? sourceValue;
@@ -124,7 +132,7 @@ namespace Test_Automation.Services
                     var varName = assertion.Source.Substring("Variable.".Length);
                     sourceValue = context.GetVariable(varName);
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Variable.{varName} = {sourceValue}");
-                    trace($"[ASSERT] Assertion source Variable.{varName} = {sourceValue}");
+                    trace($"[ASSERT] Assertion source Variable.{varName} = {sourceValue}", TraceLevel.Info);
                 }
                 else if (assertion.Source.StartsWith("PreviewVariables.", StringComparison.OrdinalIgnoreCase))
                 {
@@ -133,8 +141,8 @@ namespace Test_Automation.Services
                     sourceValue = context.GetVariable(varName);
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] PreviewVariables.{varName} = {sourceValue}");
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Context has variable '{varName}': {context.HasVariable(varName)}");
-                    trace($"[ASSERT] Assertion source PreviewVariables.{varName} = {sourceValue}");
-                    trace($"[ASSERT] Checking context for variable '{varName}': {context.HasVariable(varName)}");
+                    trace($"[ASSERT] Assertion source PreviewVariables.{varName} = {sourceValue}", TraceLevel.Info);
+                    trace($"[ASSERT] Checking context for variable '{varName}': {context.HasVariable(varName)}", TraceLevel.Info);
                 }
                 else if (string.Equals(assertion.Source, "PreviewVariables", StringComparison.OrdinalIgnoreCase))
                 {
@@ -142,15 +150,15 @@ namespace Test_Automation.Services
                     var variables = context.GetAllVariablesForPreview();
                     sourceValue = System.Text.Json.JsonSerializer.Serialize(variables);
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] PreviewVariables JSON = {sourceValue}");
-                    trace($"[ASSERT] Assertion source PreviewVariables = {sourceValue}");
+                    trace($"[ASSERT] Assertion source PreviewVariables = {sourceValue}", TraceLevel.Info);
                 }
                 else
                 {
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Using GetSourceValue for source: {assertion.Source}");
-                    trace($"[ASSERT] Using GetSourceValue for source: {assertion.Source}");
+                    trace($"[ASSERT] Using GetSourceValue for source: {assertion.Source}", TraceLevel.Info);
                     sourceValue = GetSourceValue(assertion.Source, componentData, result);
                     System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] GetSourceValue returned: {sourceValue}");
-                    trace($"[ASSERT] GetSourceValue returned: {sourceValue}");
+                    trace($"[ASSERT] GetSourceValue returned: {sourceValue}", TraceLevel.Info);
                 }
                 
                 var actualValue = ExtractValue(sourceValue, assertion.JsonPath);
@@ -161,8 +169,10 @@ namespace Test_Automation.Services
                 string message;
                 if (string.Equals(assertion.Condition, "Script", StringComparison.OrdinalIgnoreCase))
                 {
-                    var scriptResult = await ScriptEngine.ExecuteAsync("CSharp", assertion.Expected, context, actualText, trace);
-                    passed = scriptResult.Success && scriptResult.Result is bool boolResult && boolResult;
+                    trace($"[VERBOSE] Executing assertion script: {assertion.Expected?.Substring(0, Math.Min(assertion.Expected?.Length ?? 0, 100))}...", TraceLevel.Verbose);
+                    var scriptResult = await ScriptEngine.ExecuteAsync("CSharp", assertion.Expected ?? string.Empty, context, actualText, trace);
+                    var scriptPassed = scriptResult.Success && scriptResult.Result is bool b && b;
+                    passed = scriptPassed;
                     message = scriptResult.Success 
                         ? (passed ? $"Script evaluation returned true." : $"Script evaluation returned false. Result: {scriptResult.Result}")
                         : $"Script error: {scriptResult.Error}";
@@ -181,14 +191,14 @@ namespace Test_Automation.Services
                     Source = assertion.Source,
                     JsonPath = assertion.JsonPath,
                     Condition = assertion.Condition,
-                    Expected = assertion.Expected,
+                    Expected = assertion.Expected ?? string.Empty,
                     Actual = actualText
                 };
                 results.Add(evalResult);
 
-                trace($"Assertion '{assertion.Condition}' on '{assertion.Source}': expected='{assertion.Expected}', actual='{actualValue}'. Passed: {passed}.");
+                trace($"Assertion '{assertion.Condition}' on '{assertion.Source}': expected='{assertion.Expected}', actual='{actualValue}'. Passed: {passed}.", TraceLevel.Info);
             }
-
+            TraceFunction(trace, output: $"Completed({results.Count})");
             return results;
         }
 
@@ -648,22 +658,32 @@ namespace Test_Automation.Services
             return null;
         }
         
-        private string ResolveText(string? text, ExecutionContext context)
+        private string ResolveText(string? text, ExecutionContext context, Action<string, TraceLevel>? trace = null)
         {
             if (string.IsNullOrWhiteSpace(text))
             {
                 return string.Empty;
             }
 
-            return System.Text.RegularExpressions.Regex.Replace(text, "\\$\\{([^}]+)\\}", match =>
+            TraceFunction(trace, $"text='{text}'");
+            var result = System.Text.RegularExpressions.Regex.Replace(text, "\\$\\{([^}]+)\\}", match =>
             {
                 var key = match.Groups[1].Value.Trim();
                 if (!context.HasVariable(key))
                 {
                     return match.Value;
                 }
-                return ConvertToText(context.GetVariable(key));
+                var val = ConvertToText(context.GetVariable(key));
+                TraceFunction(trace, $"ResolveText.InnerMatch: {match.Value} -> {val}");
+                return val;
             });
+
+            if (result != text)
+            {
+                TraceFunction(trace, output: $"'{result}'");
+            }
+
+            return result;
         }
 
         private string ConvertToText(object? value)
@@ -676,6 +696,14 @@ namespace Test_Automation.Services
                     : json.GetRawText();
             }
             return value.ToString() ?? string.Empty;
+        }
+        private static void TraceFunction(Action<string, TraceLevel>? trace, string inputs = "", string output = "", [CallerMemberName] string methodName = "")
+        {
+            if (trace == null) return;
+            var msg = string.IsNullOrEmpty(output) 
+                ? $"[VERBOSE] Test_Automation.Services.AssertionService.{methodName}({inputs})"
+                : $"[VERBOSE] Test_Automation.Services.AssertionService.{methodName} -> {output}";
+            trace(msg, TraceLevel.Verbose);
         }
     }
 }

@@ -8,6 +8,7 @@ using Test_Automation.Componentes;
 using Test_Automation.Models;
 using Test_Automation.Models.Editor;
 using ExecutionContext = Test_Automation.Models.ExecutionContext;
+using LogLevel = Test_Automation.Services.LogLevel;
 
 namespace Test_Automation.Services
 {
@@ -42,7 +43,8 @@ namespace Test_Automation.Services
 
         public async Task<ExecutionResult> ExecuteComponent(Component component, ExecutionContext context)
         {
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] ExecuteComponent START: {component.Name} ({component.GetType().Name})");
+            Logger.Log($"ExecuteComponent START: {component.Name} ({component.GetType().Name})",
+                LogLevel.Verbose, componentId: component.Id, componentName: component.Name, executionId: context.ExecutionId);
             if (component == null)
             {
                 throw new ArgumentNullException(nameof(component));
@@ -61,24 +63,28 @@ namespace Test_Automation.Services
                 ComponentName = component.Name,
                 Status = "running",
                 ThreadIndex = CurrentThreadIndex.Value ?? 0,
-                ThreadGroupId = CurrentThreadGroupId.Value ?? string.Empty
+                ThreadGroupId = CurrentThreadGroupId.Value ?? string.Empty,
+                ExecutionId = context.ExecutionId
             };
 
             ComponentStarted?.Invoke(result);
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] About to execute: {component.Name}");
-            TraceLog(component, result, $"Execute start: {component.Name} ({component.GetType().Name})");
+            Logger.Log($"About to execute: {component.Name}", LogLevel.Verbose, 
+                componentId: component.Id, componentName: component.Name, executionId: context.ExecutionId);
+            TraceLog(component, result, $"[ComponentExecutor]Execute start: {component.Name} ({component.GetType().Name})");
 
             var originalSettings = component.Settings;
             var originalExtractors = component.Extractors;
             var originalAssertions = component.Assertions;
-
+            
             try
             {
+                TraceLog(component, result, $"[ComponentExecutor] Resolving settings, extractors, and assertions...", TraceLevel.Verbose);
                 var settingsToResolve = originalSettings ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 component.Settings = _variableService.ResolveSettings(settingsToResolve, context);
                 component.Extractors = _variableService.ResolveExtractors(originalExtractors ?? new List<VariableExtractionRule>(), context);
                 component.Assertions = _assertionService.ResolveAssertions(originalAssertions ?? new List<AssertionRule>(), context);
 
+                TraceLog(component, result, $"[ComponentExecutor] Executing component implementation: {component.GetType().Name}", TraceLevel.Verbose);
                 var componentData = await component.Execute(context);
                 result.Data = componentData;
                 result.Output = componentData?.ToString() ?? string.Empty;
@@ -91,22 +97,26 @@ namespace Test_Automation.Services
                 }
 
                 // Build and attach preview data BEFORE extraction so extractors can use the visual properties
+                TraceLog(component, result, "[PREVIEWComponentExecutor] Building preview data...", TraceLevel.Verbose);
                 _previewBuilder.BuildAndAttachPreviewData(component, result, context);
 
-                _variableService.ApplyVariableExtractors(component, context, componentData, msg => TraceLog(component, result, msg), result);
+                TraceLog(component, result, $"[ComponentExecutor] Applying {component.Extractors?.Count ?? 0} variable extractors", TraceLevel.Verbose);
+                _variableService.ApplyVariableExtractors(component, context, componentData, (msg, level) => TraceLog(component, result, msg, level), result);
 
                 // Re-build preview data after extraction to include extracted values in the UI
+                TraceLog(component, result, "[ComponentExecutor] Rebuilding after variable extraction...", TraceLevel.Verbose);
                 _previewBuilder.BuildAndAttachPreviewData(component, result, context);
 
-                var assertionResults = await _assertionService.EvaluateAssertionsAsync(component, componentData, context, msg => TraceLog(component, result, msg), result);
+                var assertionResults = await _assertionService.EvaluateAssertionsAsync(component, componentData, context, (msg, level) => TraceLog(component, result, msg, level), result);
                 result.AssertionResults = assertionResults;
                 result.AssertFailedCount = assertionResults.Count(item => !item.Passed && IsAssertMode(item.Mode));
                 result.ExpectFailedCount = assertionResults.Count(item => !item.Passed && !IsAssertMode(item.Mode));
                 result.AssertPassedCount = assertionResults.Count(item => item.Passed);
 
-                TraceLog(component, result, $"[ASSERT] Assertion evaluation complete. Passed: {result.AssertPassedCount}, Failed: {result.AssertFailedCount}");
+                TraceLog(component, result, $"[ComponentExecutor] Assertion evaluation complete. Passed: {result.AssertPassedCount}, Failed: {result.AssertFailedCount}");
 
                 // Update preview data one last time with assertion results
+                TraceLog(component, result, "[ComponentExecutor] Final rebuild with assertion results", TraceLevel.Verbose);
                 _previewBuilder.BuildAndAttachPreviewData(component, result, context);
 
                 var stopRequestedByAssertion = assertionResults.Any(item => !item.Passed && IsStopOnAssertFailureMode(item.Mode));
@@ -225,6 +235,7 @@ namespace Test_Automation.Services
 
             for (var i = 0; i < iterations; i++)
             {
+                TraceLog(loop, result, $"[ComponentExecutor] Starting loop iteration {i+1} of {iterations}", TraceLevel.Verbose);
                 ThrowIfStopped(context, $"{loop.Name} iteration {i}");
                 context.SetVariable("loop_index", i);
 
@@ -250,7 +261,9 @@ namespace Test_Automation.Services
         {
             var result = await ExecuteComponent(conditional, context);
             var condition = conditional.Settings.TryGetValue("Condition", out var value) ? value : string.Empty;
+            TraceLog(conditional, result, $"[ComponentExecutor] Evaluating condition for If component: {condition}", TraceLevel.Verbose);
             var conditionMet = _conditionService.Evaluate(condition, context);
+            TraceLog(conditional, result, $"[ComponentExecutor] Condition evaluated to: {conditionMet}", TraceLevel.Verbose);
 
             var ifData = result.Data as IfData;
             if (ifData != null)
@@ -290,7 +303,9 @@ namespace Test_Automation.Services
             var variableValue = context.GetVariable(sourceVariable);
             TraceLog(foreachComponent, result, $"Foreach '{foreachComponent.Name}': Variable '{sourceVariable}' value type: {variableValue?.GetType().Name ?? "null"}, value preview: {(variableValue?.ToString()?.Substring(0, Math.Min(100, variableValue?.ToString()?.Length ?? 0)) ?? "null")}");
             
+            TraceLog(foreachComponent, result, $"[ComponentExecutor] Resolving items from source variable: {sourceVariable}", TraceLevel.Verbose);
             var items = ResolveCollection(context, sourceVariable).ToList();
+            TraceLog(foreachComponent, result, $"[ComponentExecutor] Resolved {items.Count} items", TraceLevel.Verbose);
             
             TraceLog(foreachComponent, result, $"Foreach '{foreachComponent.Name}': Resolved {items.Count} items from '{sourceVariable}'");
 
@@ -433,6 +448,17 @@ namespace Test_Automation.Services
 
         private void TraceLog(Component component, ExecutionResult result, string message, TraceLevel level = TraceLevel.Info)
         {
+            // Also log to centralized Logger
+            var logLevel = level switch
+            {
+                TraceLevel.Verbose => LogLevel.Verbose,
+                TraceLevel.Warning => LogLevel.Warning,
+                TraceLevel.Error => LogLevel.Error,
+                _ => LogLevel.Info
+            };
+            Logger.Log(message, logLevel, componentId: component?.Id, componentName: component?.Name, executionId: result?.ExecutionId);
+
+            // Keep backward compatibility with old system
             var args = new TraceEventArgs
             {
                 ComponentId = component?.Id ?? string.Empty,
