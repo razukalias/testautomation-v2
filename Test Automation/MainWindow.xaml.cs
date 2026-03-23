@@ -2692,9 +2692,8 @@ namespace Test_Automation
             foreach (var variable in projectNode.Variables)
             {
                 if (string.IsNullOrWhiteSpace(variable.Key)) continue;
-                // Prefer the runtime value (updated by extractors); fall back to static definition
                 var runtimeValue = context.GetVariable(variable.Key);
-                result[variable.Key] = runtimeValue ?? (object)(variable.Value ?? string.Empty);
+                result[variable.Key] = CoercePreviewValue(runtimeValue ?? (object)(variable.Value ?? string.Empty));
             }
             return result;
         }
@@ -2714,11 +2713,43 @@ namespace Test_Automation
             foreach (var variable in testPlanNode.Variables)
             {
                 if (string.IsNullOrWhiteSpace(variable.Key)) continue;
-                // Prefer the runtime value (updated by extractors); fall back to static definition
                 var runtimeValue = context.GetVariable(variable.Key);
-                result[variable.Key] = runtimeValue ?? (object)(variable.Value ?? string.Empty);
+                result[variable.Key] = CoercePreviewValue(runtimeValue ?? (object)(variable.Value ?? string.Empty));
             }
             return result;
+        }
+
+        private static object CoercePreviewValue(object? value)
+        {
+            if (value == null) return string.Empty;
+
+            var text = value switch
+            {
+                System.Text.Json.JsonElement je => je.ValueKind == System.Text.Json.JsonValueKind.String
+                    ? je.GetString() ?? string.Empty
+                    : je.GetRawText(),
+                _ => value.ToString() ?? string.Empty
+            };
+
+            if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+            // If the text looks like JSON (object or array), parse it so it renders as structured JSON
+            var trimmed = text.Trim();
+            if ((trimmed.StartsWith("{") && trimmed.EndsWith("}")) ||
+                (trimmed.StartsWith("[") && trimmed.EndsWith("]")))
+            {
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(trimmed);
+                    return doc.RootElement.Clone();
+                }
+                catch (System.Text.Json.JsonException)
+                {
+                    // Not valid JSON – keep as string
+                }
+            }
+
+            return text;
         }
 
         private void SetContextHierarchicalVariables(Test_Automation.Models.ExecutionContext context, PlanNode testPlanNode)
