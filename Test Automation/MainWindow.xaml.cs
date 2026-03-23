@@ -3009,10 +3009,11 @@ namespace Test_Automation
             else
             {
                 // No runtime context yet — fall back to static definitions
-                projectVarsForDisplay = projectVariables;
+                projectVarsForDisplay = projectVariables.ToDictionary(
+                    entry => entry.Key, entry => CoercePreviewValue(entry.Value), StringComparer.OrdinalIgnoreCase);
                 testPlanVarsForDisplay = testPlanNode != null
                     ? BuildDictionaryWithOverwrite(testPlanNode.Variables)
-                        .ToDictionary(entry => entry.Key, entry => (object)entry.Value, StringComparer.OrdinalIgnoreCase)
+                        .ToDictionary(entry => entry.Key, entry => CoercePreviewValue(entry.Value), StringComparer.OrdinalIgnoreCase)
                     : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
             }
 
@@ -5339,13 +5340,13 @@ namespace Test_Automation
 
             // Build hierarchical variable structure for TestPlan scope
             var testPlanVariables = BuildDictionaryWithOverwrite(testPlanNode.Variables)
-                .ToDictionary(entry => entry.Key, entry => (object)entry.Value, StringComparer.OrdinalIgnoreCase);
+                .ToDictionary(entry => entry.Key, entry => CoercePreviewValue(entry.Value), StringComparer.OrdinalIgnoreCase);
 
             // Find parent Project node to get project variables
             var parentProjectNode = testPlanNode.Parent;
             var projectVariables = parentProjectNode != null
                 ? BuildDictionaryWithOverwrite(parentProjectNode.Variables)
-                    .ToDictionary(entry => entry.Key, entry => (object)entry.Value, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(entry => entry.Key, entry => CoercePreviewValue(entry.Value), StringComparer.OrdinalIgnoreCase)
                 : new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
             // Build dynamic structure with testplan name as key
@@ -5676,14 +5677,14 @@ namespace Test_Automation
                 .ToList();
 
             var projectVariables = BuildDictionaryWithOverwrite(projectNode.Variables)
-                .ToDictionary(entry => entry.Key, entry => (object)entry.Value, StringComparer.OrdinalIgnoreCase);
+                .ToDictionary(entry => entry.Key, entry => CoercePreviewValue(entry.Value), StringComparer.OrdinalIgnoreCase);
 
             // Build hierarchical variable structure for Project scope - includes all TestPlan variables
             var allTestPlanVariables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
             foreach (var testPlan in testPlanNodes)
             {
                 var tpVars = BuildDictionaryWithOverwrite(testPlan.Variables)
-                    .ToDictionary(entry => entry.Key, entry => (object)entry.Value, StringComparer.OrdinalIgnoreCase);
+                    .ToDictionary(entry => entry.Key, entry => CoercePreviewValue(entry.Value), StringComparer.OrdinalIgnoreCase);
                 if (tpVars.Count > 0)
                 {
                     allTestPlanVariables[testPlan.Name] = tpVars;
