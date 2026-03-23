@@ -2733,11 +2733,11 @@ namespace Test_Automation
 
             if (string.IsNullOrWhiteSpace(text)) return string.Empty;
 
-            // If the text looks like JSON (object or array), parse it so it renders as structured JSON
             var trimmed = text.Trim();
             if ((trimmed.StartsWith("{") && trimmed.EndsWith("}")) ||
                 (trimmed.StartsWith("[") && trimmed.EndsWith("]")))
             {
+                // Try strict JSON first
                 try
                 {
                     using var doc = System.Text.Json.JsonDocument.Parse(trimmed);
@@ -2745,7 +2745,24 @@ namespace Test_Automation
                 }
                 catch (System.Text.Json.JsonException)
                 {
-                    // Not valid JSON – keep as string
+                    // Try lenient: quote unquoted keys and wrap single-quoted values with double quotes
+                    var fixed_ = System.Text.RegularExpressions.Regex.Replace(
+                        trimmed,
+                        @"(?<=[{,\[])\s*([A-Za-z_]\w*)\s*(?=:)",
+                        "\"$1\"");
+                    fixed_ = System.Text.RegularExpressions.Regex.Replace(fixed_, @"'([^']*)'", "\"$1\"");
+                    if (fixed_ != trimmed)
+                    {
+                        try
+                        {
+                            using var doc2 = System.Text.Json.JsonDocument.Parse(fixed_);
+                            return doc2.RootElement.Clone();
+                        }
+                        catch (System.Text.Json.JsonException)
+                        {
+                            // Still not valid JSON – keep as string
+                        }
+                    }
                 }
             }
 
