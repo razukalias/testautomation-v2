@@ -2051,6 +2051,7 @@ namespace Test_Automation
                 SetRunState(true, context);
                 ApplyProjectVariables(context);
                 ApplyTestPlanVariables(testPlanNode, context);
+                SetContextHierarchicalVariables(context, testPlanNode);
                 var summary = await runner.RunTestPlanWithContext(testPlanComponent, context);
                 var endTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
                 PreviewLogs = string.Join("\n", new[]
@@ -2530,6 +2531,7 @@ namespace Test_Automation
                 if (parentTestPlan != null)
                 {
                     ApplyTestPlanVariables(parentTestPlan, context);
+                    SetContextHierarchicalVariables(context, parentTestPlan);
                 }
                 var result = await executor.ExecuteComponentTree(component, context);
                 context.Results.Add(result);
