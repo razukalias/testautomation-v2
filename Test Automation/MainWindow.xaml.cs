@@ -2096,6 +2096,7 @@ namespace Test_Automation
                     $"[{endTimestamp}] Run stopped by user."
                 });
                 AppendRuntimeTraceBufferToPreviewLogs();
+                UpdateProjectVariablesPreview();
             }
             catch (Exception ex)
             {
@@ -2106,7 +2107,7 @@ namespace Test_Automation
                     $"[{endTimestamp}] Run failed: {ex.Message}"
                 });
                 AppendRuntimeTraceBufferToPreviewLogs();
-                VariablesPreview = "{}";
+                UpdateProjectVariablesPreview();
             }
             finally
             {
@@ -2268,6 +2269,7 @@ namespace Test_Automation
                     $"[{endTimestamp}] Run stopped by user."
                 });
                 AppendRuntimeTraceBufferToPreviewLogs();
+                UpdateProjectVariablesPreview();
             }
             catch (Exception ex)
             {
@@ -2278,7 +2280,7 @@ namespace Test_Automation
                     $"[{endTimestamp}] Run failed: {ex.Message}"
                 });
                 AppendRuntimeTraceBufferToPreviewLogs();
-                VariablesPreview = "{}";
+                UpdateProjectVariablesPreview();
             }
             finally
             {
@@ -2518,7 +2520,7 @@ namespace Test_Automation
 
             try
             {
-                var context = _lastExecutionContext ?? new Test_Automation.Models.ExecutionContext();
+                var context = new Test_Automation.Models.ExecutionContext();
                 context.ResetStopRequest();
                 context.Status = "running";
                 SetRunState(true, context);
@@ -2576,6 +2578,7 @@ namespace Test_Automation
                     $"[{endTimestamp}] Run stopped by user."
                 });
                 AppendRuntimeTraceBufferToPreviewLogs();
+                UpdateProjectVariablesPreview();
             }
             catch (Exception ex)
             {
@@ -2586,7 +2589,7 @@ namespace Test_Automation
                     $"[{endTimestamp}] Run failed: {ex.Message}"
                 });
                 AppendRuntimeTraceBufferToPreviewLogs();
-                VariablesPreview = "{}";
+                UpdateProjectVariablesPreview();
             }
             finally
             {
@@ -3407,7 +3410,10 @@ namespace Test_Automation
         private void PlanTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
             SelectedNode = e.NewValue as PlanNode;
-            UpdateProjectVariablesPreview();
+            if (!_isRunInProgress)
+            {
+                UpdateProjectVariablesPreview();
+            }
             RefreshJsonPreview();
         }
 
