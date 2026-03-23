@@ -30,6 +30,9 @@ namespace Test_Automation
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
+        // Helper for resolving ${...} variable references in project/testplan variables
+        private readonly VariableService _variableService = new();
+
         public ObservableCollection<PlanNode> RootNodes { get; } = new ObservableCollection<PlanNode>();
         public ObservableCollection<string> ExtractorSourceOptions { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> AssertionSourceOptions { get; } = new ObservableCollection<string>();
@@ -2142,14 +2145,14 @@ namespace Test_Automation
             // Debug: Verify each context is unique
             for (var i = 0; i < contexts.Count; i++)
             {
-                System.Diagnostics.Debug.WriteLine($"[DEBUG] Context[{i}] created with ID: {contexts[i].ExecutionId}");
+                Logger.Log($"[DEBUG] Context[{i}] created with ID: {contexts[i].ExecutionId}", LogLevel.Verbose);
             }
             
             for (var i = 0; i < contexts.Count; i++)
             {
                 var context = contexts[i];
                 var testPlanNode = runnablePlans[i].Node;
-                System.Diagnostics.Debug.WriteLine($"[DEBUG] Processing test plan '{testPlanNode.Name}' with context {context.ExecutionId}");
+                Logger.Log($"[DEBUG] Processing test plan '{testPlanNode.Name}' with context {context.ExecutionId}", LogLevel.Verbose);
                 context.ResetStopRequest();
                 context.Status = "running";
                 ApplyProjectVariables(context);
@@ -2162,7 +2165,7 @@ namespace Test_Automation
                 var testVar = context.GetVariable("L");
                 if (testVar != null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG] After ApplyTestPlanVariables, variable 'L' = '{testVar}' in context {context.ExecutionId}");
+                    Logger.Log($"[DEBUG] After ApplyTestPlanVariables, variable 'L' = '{testVar}' in context {context.ExecutionId}", LogLevel.Verbose);
                 }
             }
 
@@ -2599,6 +2602,7 @@ namespace Test_Automation
                 return;
             }
 
+            // First, set all raw variables to context so they can reference each other
             foreach (var variable in projectNode.Variables)
             {
                 if (string.IsNullOrWhiteSpace(variable.Key))
@@ -2608,12 +2612,34 @@ namespace Test_Automation
 
                 context.SetVariable(variable.Key, variable.Value);
             }
+
+            // Now resolve ${...} patterns in variable values
+            foreach (var variable in projectNode.Variables)
+            {
+                if (string.IsNullOrWhiteSpace(variable.Key))
+                {
+                    continue;
+                }
+
+                // Resolve ${...} patterns using the same logic as component settings
+                var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [variable.Key] = variable.Value
+                };
+                var resolved = _variableService.ResolveSettings(settings, context);
+                if (resolved.TryGetValue(variable.Key, out var resolvedValue) && resolvedValue != variable.Value)
+                {
+                    context.SetVariable(variable.Key, resolvedValue);
+                }
+            }
         }
 
         private void ApplyTestPlanVariables(PlanNode testPlanNode, Test_Automation.Models.ExecutionContext context)
         {
             // Apply TestPlan local variables (these override project variables with the same name)
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] ApplyTestPlanVariables for '{testPlanNode.Name}' - applying {testPlanNode.Variables.Count} variables to context {context.ExecutionId}");
+            Logger.Log($"[DEBUG] ApplyTestPlanVariables for '{testPlanNode.Name}' - applying {testPlanNode.Variables.Count} variables to context {context.ExecutionId}", LogLevel.Verbose);
+
+            // First, set all raw variables to context so they can reference each other
             foreach (var variable in testPlanNode.Variables)
             {
                 if (string.IsNullOrWhiteSpace(variable.Key))
@@ -2621,8 +2647,28 @@ namespace Test_Automation
                     continue;
                 }
 
-                System.Diagnostics.Debug.WriteLine($"[DEBUG]   Setting variable '{variable.Key}' = '{variable.Value}' in context {context.ExecutionId}");
+                Logger.Log($"[DEBUG]   Setting variable '{variable.Key}' = '{variable.Value}' in context {context.ExecutionId}", LogLevel.Verbose);
                 context.SetVariable(variable.Key, variable.Value);
+            }
+
+            // Now resolve ${...} patterns in variable values
+            foreach (var variable in testPlanNode.Variables)
+            {
+                if (string.IsNullOrWhiteSpace(variable.Key))
+                {
+                    continue;
+                }
+
+                // Resolve ${...} patterns using the same logic as component settings
+                var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [variable.Key] = variable.Value
+                };
+                var resolved = _variableService.ResolveSettings(settings, context);
+                if (resolved.TryGetValue(variable.Key, out var resolvedValue) && resolvedValue != variable.Value)
+                {
+                    context.SetVariable(variable.Key, resolvedValue);
+                }
             }
         }
 

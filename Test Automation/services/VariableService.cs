@@ -73,8 +73,16 @@ namespace Test_Automation.Services
                 {
                     var varName = extractor.Source.Contains(".") ? extractor.Source.Substring(extractor.Source.IndexOf(".") + 1) : extractor.Source;
                     var value = context.GetVariable(varName);
-                    trace($"[VERBOSE] Extractor Variable source resolution: {varName} -> {value ?? "null"}", TraceLevel.Verbose);
-                    trace($"Extractor '{extractor.VariableName}': Variable source '{varName}' = {value}", TraceLevel.Info);
+                    if (value == null)
+                    {
+                        // Warn when source variable doesn't exist
+                        trace($"[WARNING] Extractor '{extractor.VariableName}': Source variable '{varName}' not found. Setting to empty string.", TraceLevel.Warning);
+                    }
+                    else
+                    {
+                        trace($"[VERBOSE] Extractor Variable source resolution: {varName} -> {value}", TraceLevel.Verbose);
+                        trace($"Extractor '{extractor.VariableName}': Variable source '{varName}' = {value}", TraceLevel.Info);
+                    }
                     context.SetVariable(extractor.VariableName, value ?? string.Empty);
                     continue;
                 }

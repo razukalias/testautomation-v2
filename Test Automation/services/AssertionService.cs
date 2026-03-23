@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Test_Automation.Componentes;
 using Test_Automation.Models;
 using Test_Automation.Models.Editor;
+using Test_Automation.Services;
 using ExecutionContext = Test_Automation.Models.ExecutionContext;
 
 namespace Test_Automation.Services
@@ -56,7 +57,7 @@ namespace Test_Automation.Services
                 {
                     var varName = assertion.Source.Substring("Variable.".Length);
                     sourceValue = context.GetVariable(varName);
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Variable.{varName} = {sourceValue}");
+                    Logger.Log($"[ASSERT] Variable.{varName} = {sourceValue}", LogLevel.Verbose, componentName: component?.Name);
                     trace($"[ASSERT] Assertion source Variable.{varName} = {sourceValue}", TraceLevel.Info);
                 }
                 else if (assertion.Source.StartsWith("PreviewVariables.", StringComparison.OrdinalIgnoreCase))
@@ -64,8 +65,8 @@ namespace Test_Automation.Services
                     // Handle PreviewVariables.varname - get specific variable from context
                     var varName = assertion.Source.Substring("PreviewVariables.".Length);
                     sourceValue = context.GetVariable(varName);
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] PreviewVariables.{varName} = {sourceValue}");
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Context has variable '{varName}': {context.HasVariable(varName)}");
+                    Logger.Log($"[ASSERT] PreviewVariables.{varName} = {sourceValue}", LogLevel.Verbose, componentName: component?.Name);
+                    Logger.Log($"[ASSERT] Context has variable '{varName}': {context.HasVariable(varName)}", LogLevel.Verbose, componentName: component?.Name);
                     trace($"[ASSERT] Assertion source PreviewVariables.{varName} = {sourceValue}", TraceLevel.Info);
                     trace($"[ASSERT] Checking context for variable '{varName}': {context.HasVariable(varName)}", TraceLevel.Info);
                 }
@@ -75,11 +76,12 @@ namespace Test_Automation.Services
                     // Use the hierarchical structure that matches the UI (includes projectVariables and testPlans paths)
                     var variables = context.GetAllVariablesForPreview();
                     sourceValue = System.Text.Json.JsonSerializer.Serialize(variables);
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] PreviewVariables JSON = {sourceValue}");
+                    Logger.Log($"[ASSERT] PreviewVariables JSON = {sourceValue}", LogLevel.Verbose, componentName: component?.Name);
                     trace($"[ASSERT] Assertion source PreviewVariables = {sourceValue}", TraceLevel.Info);
                 }
                 else
                 {
+                    Logger.Log($"[ASSERT] Using GetSourceValue for source: {assertion.Source}", LogLevel.Verbose, componentName: component?.Name);
                     trace($"[ASSERT] Using GetSourceValue for source: {assertion.Source}", TraceLevel.Info);
                     sourceValue = GetSourceValue(assertion.Source, componentData, result);
                     trace($"[VERBOSE] GetSourceValue result type: {sourceValue?.GetType().Name ?? "null"}", TraceLevel.Verbose);
@@ -131,7 +133,7 @@ namespace Test_Automation.Services
                 {
                     var varName = assertion.Source.Substring("Variable.".Length);
                     sourceValue = context.GetVariable(varName);
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Variable.{varName} = {sourceValue}");
+                    Logger.Log($"[ASSERT] Variable.{varName} = {sourceValue}", LogLevel.Verbose, componentName: component?.Name);
                     trace($"[ASSERT] Assertion source Variable.{varName} = {sourceValue}", TraceLevel.Info);
                 }
                 else if (assertion.Source.StartsWith("PreviewVariables.", StringComparison.OrdinalIgnoreCase))
@@ -139,8 +141,8 @@ namespace Test_Automation.Services
                     // Handle PreviewVariables.varname - get specific variable from context
                     var varName = assertion.Source.Substring("PreviewVariables.".Length);
                     sourceValue = context.GetVariable(varName);
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] PreviewVariables.{varName} = {sourceValue}");
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Context has variable '{varName}': {context.HasVariable(varName)}");
+                    Logger.Log($"[ASSERT] PreviewVariables.{varName} = {sourceValue}", LogLevel.Verbose, componentName: component?.Name);
+                    Logger.Log($"[ASSERT] Context has variable '{varName}': {context.HasVariable(varName)}", LogLevel.Verbose, componentName: component?.Name);
                     trace($"[ASSERT] Assertion source PreviewVariables.{varName} = {sourceValue}", TraceLevel.Info);
                     trace($"[ASSERT] Checking context for variable '{varName}': {context.HasVariable(varName)}", TraceLevel.Info);
                 }
@@ -149,15 +151,15 @@ namespace Test_Automation.Services
                     // Return all variables as JSON for PreviewVariables source
                     var variables = context.GetAllVariablesForPreview();
                     sourceValue = System.Text.Json.JsonSerializer.Serialize(variables);
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] PreviewVariables JSON = {sourceValue}");
+                    Logger.Log($"[ASSERT] PreviewVariables JSON = {sourceValue}", LogLevel.Verbose, componentName: component?.Name);
                     trace($"[ASSERT] Assertion source PreviewVariables = {sourceValue}", TraceLevel.Info);
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] Using GetSourceValue for source: {assertion.Source}");
+                    Logger.Log($"[ASSERT] Using GetSourceValue for source: {assertion.Source}", LogLevel.Verbose, componentName: component?.Name);
                     trace($"[ASSERT] Using GetSourceValue for source: {assertion.Source}", TraceLevel.Info);
                     sourceValue = GetSourceValue(assertion.Source, componentData, result);
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG ASSERT] GetSourceValue returned: {sourceValue}");
+                    Logger.Log($"[ASSERT] GetSourceValue returned: {sourceValue}", LogLevel.Verbose, componentName: component?.Name);
                     trace($"[ASSERT] GetSourceValue returned: {sourceValue}", TraceLevel.Info);
                 }
                 
@@ -699,11 +701,18 @@ namespace Test_Automation.Services
         }
         private static void TraceFunction(Action<string, TraceLevel>? trace, string inputs = "", string output = "", [CallerMemberName] string methodName = "")
         {
-            if (trace == null) return;
+            // Also log to centralized Logger
             var msg = string.IsNullOrEmpty(output) 
+                ? $"AssertionService.{methodName}({inputs})"
+                : $"AssertionService.{methodName} -> {output}";
+            Logger.Log(msg, LogLevel.Verbose, input: inputs, output: output);
+
+            // Keep backward compatibility with old callback
+            if (trace == null) return;
+            var oldMsg = string.IsNullOrEmpty(output) 
                 ? $"[VERBOSE] Test_Automation.Services.AssertionService.{methodName}({inputs})"
                 : $"[VERBOSE] Test_Automation.Services.AssertionService.{methodName} -> {output}";
-            trace(msg, TraceLevel.Verbose);
+            trace(oldMsg, TraceLevel.Verbose);
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Data;
+using Test_Automation.Services;
 
 namespace Test_Automation
 {
@@ -31,7 +32,7 @@ namespace Test_Automation
             catch (Exception ex)
             {
                 // Fallback or ignore if resource not found
-                System.Diagnostics.Debug.WriteLine($"Error changing theme: {ex.Message}");
+                Logger.Log($"Error changing theme: {ex.Message}", LogLevel.Error);
             }
         }
     }

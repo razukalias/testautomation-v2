@@ -128,22 +128,25 @@ namespace Test_Automation.Models
     }
 
     /// <summary>
-    /// Variable Extractor component model
-    /// </summary>
-    public class VariableExtractorData : ComponentData
-    {
-        [JsonPropertyName("source")]
-        public string Source { get; set; } = string.Empty;
+/// Variable Extractor component model
+/// </summary>
+public class VariableExtractorData : ComponentData
+{
+    [JsonPropertyName("source")]
+    public string Source { get; set; } = string.Empty;
 
-        [JsonPropertyName("pattern")]
-        public string Pattern { get; set; } = string.Empty;
+    [JsonPropertyName("pattern")]
+    public string Pattern { get; set; } = string.Empty;
 
-        [JsonPropertyName("variableName")]
-        public string VariableName { get; set; } = string.Empty;
+    [JsonPropertyName("variableName")]
+    public string VariableName { get; set; } = string.Empty;
 
-        [JsonPropertyName("extractedValue")]
-        public string ExtractedValue { get; set; } = string.Empty;
-    }
+    [JsonPropertyName("jsonPath")]
+    public string JsonPath { get; set; } = string.Empty;
+
+    [JsonPropertyName("extractedValue")]
+    public string ExtractedValue { get; set; } = string.Empty;
+}
 
     /// <summary>
     /// Timer component model

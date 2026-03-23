@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Text;
 using System.Threading.Tasks;
 using Test_Automation.Models;
+using Test_Automation.Services;
 
 namespace Test_Automation.Componentes
 {
@@ -24,13 +25,17 @@ namespace Test_Automation.Componentes
             var variableName = Settings.TryGetValue("VariableName", out var configuredVariableName)
                 ? configuredVariableName ?? string.Empty
                 : string.Empty;
+            var jsonPath = Settings.TryGetValue("JsonPath", out var configuredJsonPath)
+                ? configuredJsonPath ?? string.Empty
+                : string.Empty;
 
             var data = new VariableExtractorData
             {
                 Id = Id,
                 ComponentName = Name,
                 Pattern = pattern,
-                VariableName = variableName
+                VariableName = variableName,
+                JsonPath = jsonPath
             };
 
             if (string.IsNullOrWhiteSpace(variableName))
@@ -40,6 +45,24 @@ namespace Test_Automation.Componentes
             }
 
             var extracted = ResolvePatternValue(pattern, context);
+            
+            // If JsonPath is specified, try to extract value from JSON
+            if (!string.IsNullOrWhiteSpace(jsonPath) && !string.IsNullOrWhiteSpace(extracted))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(extracted);
+                    if (doc.RootElement.TryGetPropertyByJsonPath(jsonPath, out var element))
+                    {
+                        extracted = ConvertVariableToText(element);
+                    }
+                }
+                catch
+                {
+                    // If JSON parsing fails, keep the original extracted value
+                }
+            }
+
             data.ExtractedValue = extracted;
             data.Properties["resolvedValue"] = extracted;
             context.SetVariable(variableName.Trim(), extracted);
@@ -64,7 +87,8 @@ namespace Test_Automation.Componentes
                 var key = match.Groups[1].Value.Trim();
                 if (!context.HasVariable(key))
                 {
-                    return match.Value;
+                    // Return empty string instead of literal ${key} when variable doesn't exist
+                    return string.Empty;
                 }
 
                 return ConvertVariableToText(context.GetVariable(key));

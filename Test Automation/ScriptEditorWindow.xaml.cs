@@ -369,6 +369,9 @@ namespace Test_Automation
                 return;
             }
 
+            // Log to centralized logger
+            Logger.Log(message, LogLevel.Info);
+
             var line = $"[{DateTime.Now:HH:mm:ss.fff}] {message}";
             if (!Dispatcher.CheckAccess())
             {
