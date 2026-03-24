@@ -38,6 +38,7 @@ namespace Test_Automation
         public ObservableCollection<string> AssertionSourceOptions { get; } = new ObservableCollection<string>();
         private static readonly string[] BaseExtractorSources =
         {
+            "PreviewOutput",
             "PreviewResponse",
             "PreviewRequest",
             "PreviewVariables"
@@ -147,6 +148,7 @@ namespace Test_Automation
         private string _jsonPreview = "{}";
         private string _previewRequest = "Select a component to see request preview.";
         private string _previewResponse = "Select a component to see response preview.";
+        private string _previewOutput = "Select a component to see output.";
         private string _httpRequestHeadersPreview = "Select an HTTP component to see request headers.";
         private string _httpRequestCookiesPreview = "Select an HTTP component to see request cookies.";
         private string _httpRequestMetadataPreview = "Select an HTTP component to see request metadata.";
@@ -473,6 +475,17 @@ namespace Test_Automation
             {
                 if (_previewResponse == value) return;
                 _previewResponse = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string PreviewOutput
+        {
+            get => _previewOutput;
+            set
+            {
+                if (_previewOutput == value) return;
+                _previewOutput = value;
                 OnPropertyChanged();
             }
         }
@@ -4535,6 +4548,7 @@ namespace Test_Automation
             {
                 PreviewRequest = "Select a component to see request preview.";
                 PreviewResponse = "Select a component to see response preview.";
+                PreviewOutput = "Select a component to see output.";
                 PreviewLogs = "Logs will appear here.";
                 AssertionPreview = "Select a component to see assertion preview.";
                 ResetHttpDetailPreviews();
@@ -4554,12 +4568,14 @@ namespace Test_Automation
 
             if (string.Equals(nodeType, "Project", StringComparison.OrdinalIgnoreCase))
             {
+                PreviewOutput = string.Empty;
                 PopulateProjectPreview(now, nodeName);
                 return;
             }
 
             if (string.Equals(nodeType, "TestPlan", StringComparison.OrdinalIgnoreCase))
             {
+                PreviewOutput = string.Empty;
                 PopulateTestPlanPreview(now, nodeName);
                 return;
             }
@@ -4575,6 +4591,7 @@ namespace Test_Automation
                     .OrderByDescending(result => result.EndTime ?? result.StartTime)
                     .FirstOrDefault();
                 var lastHttp = GetLastExecutionData<HttpData>(nodeId);
+                PreviewOutput = lastHttp?.ResponseBody ?? string.Empty;
                 var httpRequestRuns = nodeExecutionResults
                     .Where(result => result.Data is HttpData)
                     .Select(result => new
@@ -4750,7 +4767,7 @@ namespace Test_Automation
                     .OrderByDescending(result => result.EndTime ?? result.StartTime)
                     .FirstOrDefault();
                 var lastGraphQl = GetLastExecutionData<GraphQlData>(nodeId);
-                var graphRequestRuns = nodeExecutionResults
+                PreviewOutput = lastGraphQl?.ResponseBody ?? string.Empty;                var graphRequestRuns = nodeExecutionResults
                     .Where(result => result.Data is GraphQlData)
                     .Select(result => new
                     {
@@ -4868,6 +4885,7 @@ namespace Test_Automation
                     .OrderByDescending(result => result.EndTime ?? result.StartTime)
                     .FirstOrDefault();
                 var lastSql = GetLastExecutionData<SqlData>(nodeId);
+                PreviewOutput = lastSql?.QueryResult != null ? JsonSerializer.Serialize(lastSql.QueryResult, PrettyJsonOptions) : string.Empty;
                 var sqlRequestRuns = nodeExecutionResults
                     .Where(result => result.Data is SqlData)
                     .Select(result => new
@@ -4978,6 +4996,7 @@ namespace Test_Automation
 
             if (nodeType == "Threads")
             {
+                PreviewOutput = string.Empty;
                 var threadCount = GetSettingValue("ThreadCount", "1");
                 var rampUp = GetSettingValue("RampUpSeconds", "1");
                 var childIds = GetDescendantIds(SelectedNode).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -5027,6 +5046,7 @@ namespace Test_Automation
                 var latestScriptExecution = nodeExecutionResults
                     .OrderByDescending(result => result.EndTime ?? result.StartTime)
                     .FirstOrDefault();
+                PreviewOutput = (latestScriptExecution?.Data as ScriptData)?.ExecutionResult ?? string.Empty;
                 var scriptRequestRuns = nodeExecutionResults
                     .Select(result => new
                     {
@@ -5133,6 +5153,7 @@ namespace Test_Automation
                     .OrderByDescending(result => result.EndTime ?? result.StartTime)
                     .FirstOrDefault();
                 var lastForeachData = GetLastExecutionData<ForeachData>(nodeId);
+                PreviewOutput = lastForeachData?.CurrentItem != null ? JsonSerializer.Serialize(lastForeachData.CurrentItem, PrettyJsonOptions) : string.Empty;
                 var collection = lastForeachData?.Collection ?? new List<object>();
                 var currentIndex = lastForeachData?.CurrentIndex ?? (collection.Count > 0 ? collection.Count - 1 : -1);
                 var currentItem = lastForeachData?.CurrentItem;
@@ -5190,6 +5211,9 @@ namespace Test_Automation
             var latestGenericExecution = nodeExecutionResults
                 .OrderByDescending(result => result.EndTime ?? result.StartTime)
                 .FirstOrDefault();
+            PreviewOutput = latestGenericExecution?.Data is Test_Automation.Models.ComponentData compData && compData.Properties.Count > 0
+                ? JsonSerializer.Serialize(compData.Properties, PrettyJsonOptions)
+                : latestGenericExecution?.Output ?? string.Empty;
 
             if (latestGenericExecution != null
                 && latestGenericExecution.Data == null
@@ -7800,6 +7824,7 @@ namespace Test_Automation
             AssertionSourceOptions.Clear();
 
             // Add base sources - simplified to core options for all components
+            AssertionSourceOptions.Add("PreviewOutput");
             AssertionSourceOptions.Add("PreviewVariables");
             AssertionSourceOptions.Add("PreviewRequest");
             AssertionSourceOptions.Add("PreviewResponse");

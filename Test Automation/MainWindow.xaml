@@ -1663,6 +1663,15 @@
                                                          HorizontalScrollBarVisibility="Auto"
                                                          IsReadOnly="True" />
                                             </TabItem>
+                                            <TabItem Header="Output">
+                                                <TextBox Text="{Binding PreviewOutput}"
+                                                         FontFamily="Consolas"
+                                                         FontSize="12"
+                                                         AcceptsReturn="True"
+                                                         VerticalScrollBarVisibility="Auto"
+                                                         HorizontalScrollBarVisibility="Auto"
+                                                         IsReadOnly="True" />
+                                            </TabItem>
                                             <TabItem Header="Logs">
                                                 <TextBox Text="{Binding PreviewLogs}"
                                                          FontFamily="Consolas"

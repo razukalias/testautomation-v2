@@ -165,6 +165,18 @@ namespace Test_Automation.Services
                 return json;
             }
 
+            // Handle PreviewOutput - raw component output without metadata
+            if (string.Equals(source, "PreviewOutput", StringComparison.OrdinalIgnoreCase))
+            {
+                if (result?.Data is ScriptData script) return script.ExecutionResult;
+                if (result?.Data is HttpData http) return http.ResponseBody;
+                if (result?.Data is GraphQlData gql) return gql.ResponseBody;
+                if (result?.Data is SqlData sql) return sql.QueryResult != null ? JsonSerializer.Serialize(sql.QueryResult) : string.Empty;
+                if (result?.Data is ForeachData fe) return fe.CurrentItem != null ? JsonSerializer.Serialize(fe.CurrentItem) : string.Empty;
+                if (result?.Data is Test_Automation.Models.ComponentData compData && compData.Properties.TryGetValue("result", out var rawResult)) return rawResult?.ToString() ?? string.Empty;
+                return result?.Output ?? string.Empty;
+            }
+
             // Handle UI source names (PreviewResponse, PreviewRequest, etc.)
             if (string.Equals(source, "PreviewResponse", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(source, "Body", StringComparison.OrdinalIgnoreCase))
