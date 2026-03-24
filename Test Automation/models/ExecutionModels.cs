@@ -143,10 +143,10 @@ namespace Test_Automation.Models
         {
             var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
-            // First, add all flat variables (backward compatibility)
+            // First, add all flat variables (backward compatibility) — coerce JSON strings to objects
             foreach (var kvp in Variables)
             {
-                result[kvp.Key] = kvp.Value ?? string.Empty;
+                result[kvp.Key] = CoercePreviewValue(kvp.Value ?? string.Empty);
             }
 
             // If we have stored hierarchical variables (from node definitions), merge them
@@ -159,11 +159,11 @@ namespace Test_Automation.Models
                     var projectVarsNested = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                     foreach (var kvp in projDict)
                     {
-                        projectVarsNested[kvp.Key] = kvp.Value;
+                        projectVarsNested[kvp.Key] = CoercePreviewValue(kvp.Value);
                         // Also at top level for easier access (if not already exists)
                         if (!result.ContainsKey(kvp.Key))
                         {
-                            result[kvp.Key] = kvp.Value;
+                            result[kvp.Key] = CoercePreviewValue(kvp.Value);
                         }
                     }
                     result["projectVariables"] = projectVarsNested;
@@ -181,18 +181,18 @@ namespace Test_Automation.Models
                             var planVarsNested = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                             foreach (var varKvp in planVars)
                             {
-                                planVarsNested[varKvp.Key] = varKvp.Value;
+                                planVarsNested[varKvp.Key] = CoercePreviewValue(varKvp.Value);
                                 // Also at top level if not exists
                                 if (!result.ContainsKey(varKvp.Key))
                                 {
-                                    result[varKvp.Key] = varKvp.Value;
+                                    result[varKvp.Key] = CoercePreviewValue(varKvp.Value);
                                 }
                             }
                             testPlansNested[planKvp.Key] = planVarsNested;
                         }
                         else
                         {
-                            testPlansNested[planKvp.Key] = planKvp.Value;
+                            testPlansNested[planKvp.Key] = CoercePreviewValue(planKvp.Value);
                         }
                     }
                     result["testPlans"] = testPlansNested;
@@ -200,6 +200,53 @@ namespace Test_Automation.Models
             }
 
             return result;
+        }
+
+        private static object CoercePreviewValue(object? value)
+        {
+            if (value == null) return string.Empty;
+
+            var text = value switch
+            {
+                System.Text.Json.JsonElement je => je.ValueKind == System.Text.Json.JsonValueKind.String
+                    ? je.GetString() ?? string.Empty
+                    : je.GetRawText(),
+                _ => value.ToString() ?? string.Empty
+            };
+
+            if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+            var trimmed = text.Trim();
+            if ((trimmed.StartsWith("{") && trimmed.EndsWith("}")) ||
+                (trimmed.StartsWith("[") && trimmed.EndsWith("]")))
+            {
+                // Try strict JSON first
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(trimmed);
+                    return doc.RootElement.Clone();
+                }
+                catch (System.Text.Json.JsonException)
+                {
+                    // Try lenient: quote unquoted keys and wrap single-quoted values with double quotes
+                    var fixed_ = System.Text.RegularExpressions.Regex.Replace(
+                        trimmed,
+                        @"(?<=[{,\[])\s*([A-Za-z_]\w*)\s*(?=:)",
+                        "\"$1\"");
+                    fixed_ = System.Text.RegularExpressions.Regex.Replace(fixed_, @"'([^']*)'", "\"$1\"");
+                    if (fixed_ != trimmed)
+                    {
+                        try
+                        {
+                            using var doc2 = System.Text.Json.JsonDocument.Parse(fixed_);
+                            return doc2.RootElement.Clone();
+                        }
+                        catch (System.Text.Json.JsonException) { }
+                    }
+                }
+            }
+
+            return text;
         }
     }
 
