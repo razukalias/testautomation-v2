@@ -666,10 +666,40 @@ namespace Test_Automation.Services
             }
             catch (JsonException)
             {
-                // Not a valid JSON, so cannot apply JsonPath
+                // Try lenient parsing for JavaScript-style objects like {a:1} or {name:'value'}
+                var lenient = LenientJsonFix(sourceText);
+                if (lenient != sourceText)
+                {
+                    try
+                    {
+                        using var doc2 = JsonDocument.Parse(lenient);
+                        if (doc2.RootElement.TryGetPropertyByJsonPath(jsonPath, out var element2))
+                        {
+                            return element2.ValueKind switch
+                            {
+                                JsonValueKind.String => element2.GetString(),
+                                JsonValueKind.Number => element2.GetDecimal(),
+                                JsonValueKind.True => true,
+                                JsonValueKind.False => false,
+                                JsonValueKind.Null => null,
+                                _ => element2.GetRawText()
+                            };
+                        }
+                    }
+                    catch (JsonException) { }
+                }
             }
 
             return null;
+        }
+
+        private static string LenientJsonFix(string text)
+        {
+            var trimmed = text.Trim();
+            var fixed_ = System.Text.RegularExpressions.Regex.Replace(
+                trimmed, @"(?<=[{,\[])\s*([A-Za-z_]\w*)\s*(?=:)", "\"$1\"");
+            fixed_ = System.Text.RegularExpressions.Regex.Replace(fixed_, @"'([^']*)'", "\"$1\"");
+            return fixed_;
         }
         
         private string ResolveText(string? text, ExecutionContext context, Action<string, TraceLevel>? trace = null)
