@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Text.Json.Serialization;
 using System.Threading;
+using Test_Automation.Services;
 
 namespace Test_Automation.Models
 {
@@ -105,6 +106,10 @@ namespace Test_Automation.Models
             }
 
             Variables[normalizedKey] = value;
+            
+            // Log variable operation at verbose level
+            Logger.Log($"[VARIABLE] SetVariable: '{normalizedKey}' = '{TruncateValue(value, 100)}'", 
+                Test_Automation.Services.LogLevel.Verbose, executionId: ExecutionId);
         }
 
         public object? GetVariable(string key)
@@ -115,13 +120,33 @@ namespace Test_Automation.Models
                 return null;
             }
 
-            return Variables.TryGetValue(normalizedKey, out var value) ? value : null;
+            var value = Variables.TryGetValue(normalizedKey, out var val) ? val : null;
+            
+            // Log variable operation at verbose level
+            Logger.Log($"[VARIABLE] GetVariable: '{normalizedKey}' = '{TruncateValue(value, 100)}'", 
+                Test_Automation.Services.LogLevel.Verbose, executionId: ExecutionId);
+            
+            return value;
         }
 
         public bool HasVariable(string key)
         {
             var normalizedKey = key?.Trim() ?? string.Empty;
-            return !string.IsNullOrWhiteSpace(normalizedKey) && Variables.ContainsKey(normalizedKey);
+            var exists = !string.IsNullOrWhiteSpace(normalizedKey) && Variables.ContainsKey(normalizedKey);
+            
+            // Log variable operation at verbose level
+            Logger.Log($"[VARIABLE] HasVariable: '{normalizedKey}' = {exists}", 
+                Test_Automation.Services.LogLevel.Verbose, executionId: ExecutionId);
+            
+            return exists;
+        }
+
+        private static string TruncateValue(object? value, int maxLength = 200)
+        {
+            if (value == null) return "null";
+            var text = value.ToString() ?? string.Empty;
+            if (text.Length <= maxLength) return text;
+            return text.Substring(0, maxLength) + "...[truncated]";
         }
 
         /// <summary>

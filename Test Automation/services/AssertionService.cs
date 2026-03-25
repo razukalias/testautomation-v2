@@ -88,7 +88,7 @@ namespace Test_Automation.Services
                     trace($"[ASSERT] GetSourceValue returned: {sourceValue}", TraceLevel.Info);
                 }
                 
-                var actualValue = ExtractValue(sourceValue, assertion.JsonPath);
+                var actualValue = ExtractValue(sourceValue, assertion.JsonPath, trace);
                 var (passed, message) = Compare(actualValue, assertion.Condition, assertion.Expected);
 
                 var evalResult = new AssertionEvaluationResult
@@ -107,6 +107,10 @@ namespace Test_Automation.Services
 
                 trace($"Assertion '{assertion.Condition}' on '{assertion.Source}': expected='{assertion.Expected}', actual='{actualValue}'. Passed: {passed}.", TraceLevel.Info);
             }
+            
+            // Log variable snapshot after assertion evaluation
+            LogVariableSnapshot(context, "After assertions", trace, component.Id, context.ExecutionId);
+            
             TraceFunction(trace, output: $"Completed({results.Count})");
             return results;
         }
@@ -122,6 +126,9 @@ namespace Test_Automation.Services
             }
 
             trace($"Evaluating {component.Assertions?.Count ?? 0} assertions for {component.Name}.", TraceLevel.Info);
+            
+            // Log variable snapshot before assertion evaluation
+            LogVariableSnapshot(context, "Before assertions", trace, component.Id, context.ExecutionId);
 
             for (var index = 0; index < (component.Assertions?.Count ?? 0); index++)
             {
@@ -163,7 +170,7 @@ namespace Test_Automation.Services
                     trace($"[ASSERT] GetSourceValue returned: {sourceValue}", TraceLevel.Info);
                 }
                 
-                var actualValue = ExtractValue(sourceValue, assertion.JsonPath);
+                var actualValue = ExtractValue(sourceValue, assertion.JsonPath, trace);
                 var actualText = ConvertToText(actualValue);
                 
                 // Handle Script condition specially with async evaluation
@@ -200,6 +207,10 @@ namespace Test_Automation.Services
 
                 trace($"Assertion '{assertion.Condition}' on '{assertion.Source}': expected='{assertion.Expected}', actual='{actualValue}'. Passed: {passed}.", TraceLevel.Info);
             }
+            
+            // Log variable snapshot after assertion evaluation
+            LogVariableSnapshot(context, "After assertions", trace, component.Id, context.ExecutionId);
+            
             TraceFunction(trace, output: $"Completed({results.Count})");
             return results;
         }
@@ -638,21 +649,31 @@ namespace Test_Automation.Services
             }
         }
 
-        private object? ExtractValue(object? sourceValue, string jsonPath)
+        private object? ExtractValue(object? sourceValue, string jsonPath, Action<string, TraceLevel>? trace = null)
         {
-            if (sourceValue == null) return null;
+            if (sourceValue == null) 
+            {
+                trace?.Invoke($"[VERBOSE] Assertion ExtractValue: sourceValue is null, returning null", TraceLevel.Verbose);
+                return null;
+            }
 
             var sourceText = ConvertToText(sourceValue);
             if (string.IsNullOrWhiteSpace(jsonPath) || string.IsNullOrWhiteSpace(sourceText))
             {
+                trace?.Invoke($"[VERBOSE] Assertion ExtractValue: jsonPath or sourceText empty, returning sourceValue: {TruncateForLogging(sourceValue, 100)}", TraceLevel.Verbose);
                 return sourceValue;
             }
+
+            trace?.Invoke($"[VERBOSE] Assertion ExtractValue: Source type={sourceValue.GetType().Name}, JsonPath='{jsonPath}'", TraceLevel.Verbose);
+            trace?.Invoke($"[VERBOSE] Assertion ExtractValue: Source text (first 200 chars)='{TruncateForLogging(sourceText, 200)}'", TraceLevel.Verbose);
 
             try
             {
                 using var doc = JsonDocument.Parse(sourceText);
-                if (doc.RootElement.TryGetPropertyByJsonPath(jsonPath, out var element))
+                if (doc.RootElement.TryGetPropertyByJsonPath(jsonPath, out var element, 
+                    step => trace?.Invoke($"[VERBOSE] Assertion JsonPath step: {step}", TraceLevel.Verbose)))
                 {
+                    trace?.Invoke($"[VERBOSE] Assertion JsonPath result: type={element.ValueKind}, value={TruncateForLogging(element.GetRawText(), 100)}", TraceLevel.Verbose);
                     return element.ValueKind switch
                     {
                         JsonValueKind.String => element.GetString(),
@@ -663,18 +684,26 @@ namespace Test_Automation.Services
                         _ => element.GetRawText()
                     };
                 }
+                else
+                {
+                    trace?.Invoke($"[VERBOSE] Assertion JsonPath '{jsonPath}' not found in source", TraceLevel.Verbose);
+                }
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
+                trace?.Invoke($"[VERBOSE] Assertion JsonException parsing source: {ex.Message}", TraceLevel.Verbose);
                 // Try lenient parsing for JavaScript-style objects like {a:1} or {name:'value'}
                 var lenient = LenientJsonFix(sourceText);
                 if (lenient != sourceText)
                 {
+                    trace?.Invoke($"[VERBOSE] Assertion trying lenient JSON fix: '{TruncateForLogging(lenient, 200)}'", TraceLevel.Verbose);
                     try
                     {
                         using var doc2 = JsonDocument.Parse(lenient);
-                        if (doc2.RootElement.TryGetPropertyByJsonPath(jsonPath, out var element2))
+                        if (doc2.RootElement.TryGetPropertyByJsonPath(jsonPath, out var element2,
+                            step => trace?.Invoke($"[VERBOSE] Assertion lenient JsonPath step: {step}", TraceLevel.Verbose)))
                         {
+                            trace?.Invoke($"[VERBOSE] Assertion lenient JsonPath result: type={element2.ValueKind}, value={TruncateForLogging(element2.GetRawText(), 100)}", TraceLevel.Verbose);
                             return element2.ValueKind switch
                             {
                                 JsonValueKind.String => element2.GetString(),
@@ -686,10 +715,13 @@ namespace Test_Automation.Services
                             };
                         }
                     }
-                    catch (JsonException) { }
+                    catch (JsonException ex2) 
+                    { 
+                        trace?.Invoke($"[VERBOSE] Assertion lenient parsing also failed: {ex2.Message}", TraceLevel.Verbose);
+                    }
                 }
             }
-
+            trace?.Invoke($"[VERBOSE] Assertion ExtractValue: Returning null as JsonPath not found", TraceLevel.Verbose);
             return null;
         }
 
@@ -741,6 +773,14 @@ namespace Test_Automation.Services
             }
             return value.ToString() ?? string.Empty;
         }
+
+        private static string TruncateForLogging(object? value, int maxLength = 200)
+        {
+            if (value == null) return "null";
+            var text = value.ToString() ?? string.Empty;
+            if (text.Length <= maxLength) return text;
+            return text.Substring(0, maxLength) + "...[truncated]";
+        }
         private static void TraceFunction(Action<string, TraceLevel>? trace, string inputs = "", string output = "", [CallerMemberName] string methodName = "")
         {
             // Also log to centralized Logger
@@ -755,6 +795,57 @@ namespace Test_Automation.Services
                 ? $"[VERBOSE] Test_Automation.Services.AssertionService.{methodName}({inputs})"
                 : $"[VERBOSE] Test_Automation.Services.AssertionService.{methodName} -> {output}";
             trace(oldMsg, TraceLevel.Verbose);
+        }
+
+        private static void LogVariableSnapshot(ExecutionContext context, string stage, Action<string, TraceLevel>? trace = null, 
+            string? componentId = null, string? executionId = null)
+        {
+            if (trace == null && Logger.GetMinimumLevel() > LogLevel.Verbose) return;
+            
+            try
+            {
+                var variables = context.GetAllVariablesForPreview();
+                var varCount = variables.Count;
+                
+                if (varCount == 0)
+                {
+                    trace?.Invoke($"[ASSERT-VARIABLES] {stage}: No variables in context", TraceLevel.Verbose);
+                    Logger.Log($"[ASSERT-VARIABLES] {stage}: No variables in context", LogLevel.Verbose, 
+                        componentId: componentId, executionId: executionId);
+                    return;
+                }
+                
+                var varNames = string.Join(", ", variables.Keys.Take(15).OrderBy(k => k));
+                if (variables.Count > 15) varNames += "...";
+                
+                var sampleValues = string.Join(", ", variables
+                    .OrderBy(kv => kv.Key)
+                    .Take(5)
+                    .Select(kv => $"{kv.Key}={TruncateForLogging(kv.Value, 50)}"));
+                
+                var message = $"[ASSERT-VARIABLES] {stage}: {varCount} variables. Names: [{varNames}]";
+                trace?.Invoke(message, TraceLevel.Verbose);
+                Logger.Log(message, LogLevel.Verbose, componentId: componentId, executionId: executionId);
+                
+                if (varCount <= 10) // Show values for small sets
+                {
+                    var valuesMessage = $"[ASSERT-VARIABLES] {stage} Values: [{sampleValues}]";
+                    trace?.Invoke(valuesMessage, TraceLevel.Verbose);
+                    Logger.Log(valuesMessage, LogLevel.Verbose, componentId: componentId, executionId: executionId);
+                }
+                else
+                {
+                    var samplesMessage = $"[ASSERT-VARIABLES] {stage} Samples (first 5): [{sampleValues}]";
+                    trace?.Invoke(samplesMessage, TraceLevel.Verbose);
+                    Logger.Log(samplesMessage, LogLevel.Verbose, componentId: componentId, executionId: executionId);
+                }
+            }
+            catch (Exception ex)
+            {
+                trace?.Invoke($"[ASSERT-VARIABLES] {stage}: Error logging variables: {ex.Message}", TraceLevel.Warning);
+                Logger.Log($"[ASSERT-VARIABLES] {stage}: Error logging variables: {ex.Message}", LogLevel.Warning, 
+                    componentId: componentId, executionId: executionId);
+            }
         }
     }
 }

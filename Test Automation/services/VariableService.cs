@@ -60,6 +60,9 @@ namespace Test_Automation.Services
                 return;
             }
 
+            // Log variable snapshot before extraction
+            LogVariableSnapshot(context, "Before extraction", trace, component.Id, context.ExecutionId);
+            
             foreach (var extractor in component.Extractors!)
             {
                 if (string.IsNullOrWhiteSpace(extractor.VariableName))
@@ -99,7 +102,7 @@ namespace Test_Automation.Services
                 }
 
                 trace($"[VERBOSE] Evaluating JsonPath '{extractor.JsonPath}' on source value", TraceLevel.Verbose);
-                var extractedValue = ExtractValue(sourceValue, extractor.JsonPath);
+                var extractedValue = ExtractValue(sourceValue, extractor.JsonPath, trace);
 
                 if (extractedValue == null)
                 {
@@ -113,6 +116,10 @@ namespace Test_Automation.Services
                     context.SetVariable(extractor.VariableName, extractedValue);
                 }
             }
+            
+            // Log variable snapshot after extraction completes
+            LogVariableSnapshot(context, "After extraction", trace, component.Id, context.ExecutionId);
+            
             TraceFunction(trace, output: "Success");
         }
 
@@ -218,17 +225,30 @@ namespace Test_Automation.Services
             return null;
         }
 
-        private object? ExtractValue(object? sourceValue, string jsonPath)
+        private object? ExtractValue(object? sourceValue, string jsonPath, Action<string, TraceLevel>? trace = null)
         {
-            if (sourceValue == null) return null;
+            if (sourceValue == null) 
+            {
+                trace?.Invoke($"[VERBOSE] ExtractValue: sourceValue is null, returning null", TraceLevel.Verbose);
+                return null;
+            }
             var sourceText = ConvertVariableToText(sourceValue);
-            if (string.IsNullOrWhiteSpace(jsonPath) || string.IsNullOrWhiteSpace(sourceText)) return sourceValue;
+            if (string.IsNullOrWhiteSpace(jsonPath) || string.IsNullOrWhiteSpace(sourceText)) 
+            {
+                trace?.Invoke($"[VERBOSE] ExtractValue: jsonPath or sourceText empty, returning sourceValue: {TruncateForLogging(sourceValue, 100)}", TraceLevel.Verbose);
+                return sourceValue;
+            }
+
+            trace?.Invoke($"[VERBOSE] ExtractValue: Source type={sourceValue.GetType().Name}, JsonPath='{jsonPath}'", TraceLevel.Verbose);
+            trace?.Invoke($"[VERBOSE] ExtractValue: Source text (first 200 chars)='{TruncateForLogging(sourceText, 200)}'", TraceLevel.Verbose);
 
             try
             {
                 using var doc = JsonDocument.Parse(sourceText);
-                if (doc.RootElement.TryGetPropertyByJsonPath(jsonPath, out var element))
+                if (doc.RootElement.TryGetPropertyByJsonPath(jsonPath, out var element, 
+                    step => trace?.Invoke($"[VERBOSE] JsonPath step: {step}", TraceLevel.Verbose)))
                 {
+                    trace?.Invoke($"[VERBOSE] JsonPath result: type={element.ValueKind}, value={TruncateForLogging(element.GetRawText(), 100)}", TraceLevel.Verbose);
                     return element.ValueKind switch
                     {
                         JsonValueKind.String => element.GetString(),
@@ -239,18 +259,26 @@ namespace Test_Automation.Services
                         _ => element.GetRawText()
                     };
                 }
+                else
+                {
+                    trace?.Invoke($"[VERBOSE] JsonPath '{jsonPath}' not found in source", TraceLevel.Verbose);
+                }
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
+                trace?.Invoke($"[VERBOSE] JsonException parsing source: {ex.Message}", TraceLevel.Verbose);
                 // Try lenient parsing for JavaScript-style objects like {a:1} or {name:'value'}
                 var lenient = LenientJsonFix(sourceText);
                 if (lenient != sourceText)
                 {
+                    trace?.Invoke($"[VERBOSE] Trying lenient JSON fix: '{TruncateForLogging(lenient, 200)}'", TraceLevel.Verbose);
                     try
                     {
                         using var doc2 = JsonDocument.Parse(lenient);
-                        if (doc2.RootElement.TryGetPropertyByJsonPath(jsonPath, out var element2))
+                        if (doc2.RootElement.TryGetPropertyByJsonPath(jsonPath, out var element2,
+                            step => trace?.Invoke($"[VERBOSE] Lenient JsonPath step: {step}", TraceLevel.Verbose)))
                         {
+                            trace?.Invoke($"[VERBOSE] Lenient JsonPath result: type={element2.ValueKind}, value={TruncateForLogging(element2.GetRawText(), 100)}", TraceLevel.Verbose);
                             return element2.ValueKind switch
                             {
                                 JsonValueKind.String => element2.GetString(),
@@ -262,10 +290,22 @@ namespace Test_Automation.Services
                             };
                         }
                     }
-                    catch (JsonException) { }
+                    catch (JsonException ex2) 
+                    { 
+                        trace?.Invoke($"[VERBOSE] Lenient parsing also failed: {ex2.Message}", TraceLevel.Verbose);
+                    }
                 }
             }
+            trace?.Invoke($"[VERBOSE] ExtractValue: Returning original sourceValue as fallback", TraceLevel.Verbose);
             return sourceValue;
+        }
+
+        private static string TruncateForLogging(object? value, int maxLength = 200)
+        {
+            if (value == null) return "null";
+            var text = value.ToString() ?? string.Empty;
+            if (text.Length <= maxLength) return text;
+            return text.Substring(0, maxLength) + "...[truncated]";
         }
 
         private static string LenientJsonFix(string text)
@@ -299,39 +339,129 @@ namespace Test_Automation.Services
                 : $"[VERBOSE] Test_Automation.Services.VariableService.{methodName} -> {output}";
             trace(oldMsg, TraceLevel.Verbose);
         }
+
+        private void LogVariableSnapshot(ExecutionContext context, string stage, Action<string, TraceLevel>? trace = null, 
+            string? componentId = null, string? executionId = null)
+        {
+            if (trace == null && Logger.GetMinimumLevel() > LogLevel.Verbose) return;
+            
+            try
+            {
+                var variables = context.GetAllVariablesForPreview();
+                var varCount = variables.Count;
+                
+                if (varCount == 0)
+                {
+                    trace?.Invoke($"[VARIABLES] {stage}: No variables in context", TraceLevel.Verbose);
+                    Logger.Log($"[VARIABLES] {stage}: No variables in context", LogLevel.Verbose, 
+                        componentId: componentId, executionId: executionId);
+                    return;
+                }
+                
+                var varNames = string.Join(", ", variables.Keys.Take(15).OrderBy(k => k));
+                if (variables.Count > 15) varNames += "...";
+                
+                var sampleValues = string.Join(", ", variables
+                    .OrderBy(kv => kv.Key)
+                    .Take(5)
+                    .Select(kv => $"{kv.Key}={TruncateForLogging(kv.Value, 50)}"));
+                
+                var message = $"[VARIABLES] {stage}: {varCount} variables. Names: [{varNames}]";
+                trace?.Invoke(message, TraceLevel.Verbose);
+                Logger.Log(message, LogLevel.Verbose, componentId: componentId, executionId: executionId);
+                
+                if (varCount <= 10) // Show values for small sets
+                {
+                    var valuesMessage = $"[VARIABLES] {stage} Values: [{sampleValues}]";
+                    trace?.Invoke(valuesMessage, TraceLevel.Verbose);
+                    Logger.Log(valuesMessage, LogLevel.Verbose, componentId: componentId, executionId: executionId);
+                }
+                else
+                {
+                    var samplesMessage = $"[VARIABLES] {stage} Samples (first 5): [{sampleValues}]";
+                    trace?.Invoke(samplesMessage, TraceLevel.Verbose);
+                    Logger.Log(samplesMessage, LogLevel.Verbose, componentId: componentId, executionId: executionId);
+                }
+            }
+            catch (Exception ex)
+            {
+                trace?.Invoke($"[VARIABLES] {stage}: Error logging variables: {ex.Message}", TraceLevel.Warning);
+                Logger.Log($"[VARIABLES] {stage}: Error logging variables: {ex.Message}", LogLevel.Warning, 
+                    componentId: componentId, executionId: executionId);
+            }
+        }
     }
 
     public static class JsonElementExtensions
     {
         public static bool TryGetPropertyByJsonPath(this JsonElement element, string jsonPath, out JsonElement value)
         {
+            return TryGetPropertyByJsonPath(element, jsonPath, out value, null);
+        }
+
+        public static bool TryGetPropertyByJsonPath(this JsonElement element, string jsonPath, out JsonElement value, Action<string>? logStep)
+        {
             value = default;
             var path = jsonPath?.Trim() ?? string.Empty;
+            logStep?.Invoke($"JsonPath: '{jsonPath}', normalized: '{path}'");
+            
             if (path.StartsWith("$.")) path = path.Substring(2);
             else if (path.StartsWith("$[")) path = path.Substring(1);
             else if (path == "$") path = string.Empty;
 
-            if (string.IsNullOrEmpty(path)) { value = element; return true; }
+            if (string.IsNullOrEmpty(path)) 
+            { 
+                logStep?.Invoke($"Empty path, returning root element");
+                value = element; 
+                return true; 
+            }
 
             var tokens = TokenizePath(path);
+            logStep?.Invoke($"Tokenized into {tokens.Count} tokens: [{string.Join(", ", tokens)}]");
+            
             JsonElement current = element;
 
-            foreach (var token in tokens)
+            for (int tokenIndex = 0; tokenIndex < tokens.Count; tokenIndex++)
             {
+                var token = tokens[tokenIndex];
+                logStep?.Invoke($"Token[{tokenIndex}]: '{token}', current type: {current.ValueKind}");
+                
                 if (current.ValueKind == JsonValueKind.String)
                 {
-                    try { using var innerDoc = JsonDocument.Parse(current.GetString()!); current = innerDoc.RootElement.Clone(); }
-                    catch { return false; }
+                    try 
+                    { 
+                        using var innerDoc = JsonDocument.Parse(current.GetString()!); 
+                        current = innerDoc.RootElement.Clone();
+                        logStep?.Invoke($"Parsed nested JSON string, new type: {current.ValueKind}");
+                    }
+                    catch (Exception ex)
+                    { 
+                        logStep?.Invoke($"Failed to parse nested JSON string: {ex.Message}");
+                        return false; 
+                    }
                 }
 
                 if (token.StartsWith("[") && token.EndsWith("]"))
                 {
                     var indexStr = token.Substring(1, token.Length - 2);
-                    if (!int.TryParse(indexStr, out var idx)) return false;
-                    if (current.ValueKind != JsonValueKind.Array) return false;
+                    if (!int.TryParse(indexStr, out var idx)) 
+                    {
+                        logStep?.Invoke($"Invalid array index: '{indexStr}'");
+                        return false;
+                    }
+                    if (current.ValueKind != JsonValueKind.Array) 
+                    {
+                        logStep?.Invoke($"Expected array for index [{idx}], but got {current.ValueKind}");
+                        return false;
+                    }
                     var arr = current.EnumerateArray().ToList();
-                    if (idx < 0 || idx >= arr.Count) return false;
+                    if (idx < 0 || idx >= arr.Count) 
+                    {
+                        logStep?.Invoke($"Array index [{idx}] out of bounds, array has {arr.Count} elements");
+                        return false;
+                    }
                     current = arr[idx];
+                    logStep?.Invoke($"Array access [{idx}] successful, new type: {current.ValueKind}");
                 }
                 else
                 {
@@ -340,35 +470,87 @@ namespace Test_Automation.Services
                     {
                         var propName = token.Substring(0, bracketIdx);
                         var bracketPart = token.Substring(bracketIdx);
-                        if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(propName, out var propElement)) return false;
+                        logStep?.Invoke($"Property with array accessor: '{propName}' with brackets '{bracketPart}'");
+                        
+                        if (current.ValueKind != JsonValueKind.Object) 
+                        {
+                            logStep?.Invoke($"Expected object for property '{propName}', but got {current.ValueKind}");
+                            return false;
+                        }
+                        if (!current.TryGetProperty(propName, out var propElement)) 
+                        {
+                            logStep?.Invoke($"Property '{propName}' not found in object");
+                            return false;
+                        }
                         current = propElement;
+                        logStep?.Invoke($"Property '{propName}' found, type: {current.ValueKind}");
 
                         var innerTokens = TokenizeBrackets(bracketPart);
+                        logStep?.Invoke($"Processing {innerTokens.Count} bracket tokens: [{string.Join(", ", innerTokens)}]");
+                        
                         foreach (var innerToken in innerTokens)
                         {
                             if (current.ValueKind == JsonValueKind.String)
                             {
-                                try { using var innerDoc = JsonDocument.Parse(current.GetString()!); current = innerDoc.RootElement.Clone(); }
-                                catch { return false; }
+                                try 
+                                { 
+                                    using var innerDoc = JsonDocument.Parse(current.GetString()!); 
+                                    current = innerDoc.RootElement.Clone();
+                                    logStep?.Invoke($"Parsed nested JSON string in brackets, new type: {current.ValueKind}");
+                                }
+                                catch (Exception ex)
+                                { 
+                                    logStep?.Invoke($"Failed to parse nested JSON in brackets: {ex.Message}");
+                                    return false; 
+                                }
                             }
                             if (innerToken.StartsWith("[") && innerToken.EndsWith("]"))
                             {
                                 var iStr = innerToken.Substring(1, innerToken.Length - 2);
-                                if (!int.TryParse(iStr, out var iIdx)) return false;
-                                if (current.ValueKind != JsonValueKind.Array) return false;
+                                if (!int.TryParse(iStr, out var iIdx)) 
+                                {
+                                    logStep?.Invoke($"Invalid array index in brackets: '{iStr}'");
+                                    return false;
+                                }
+                                if (current.ValueKind != JsonValueKind.Array) 
+                                {
+                                    logStep?.Invoke($"Expected array for index [{iIdx}] in brackets, but got {current.ValueKind}");
+                                    return false;
+                                }
                                 var arr = current.EnumerateArray().ToList();
-                                if (iIdx < 0 || iIdx >= arr.Count) return false;
+                                if (iIdx < 0 || iIdx >= arr.Count) 
+                                {
+                                    logStep?.Invoke($"Array index [{iIdx}] in brackets out of bounds, array has {arr.Count} elements");
+                                    return false;
+                                }
                                 current = arr[iIdx];
-                            } else return false;
+                                logStep?.Invoke($"Bracket array access [{iIdx}] successful, new type: {current.ValueKind}");
+                            } else 
+                            {
+                                logStep?.Invoke($"Invalid bracket token: '{innerToken}'");
+                                return false;
+                            }
                         }
                     }
                     else
                     {
-                        if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(token, out var next)) return false;
+                        if (current.ValueKind != JsonValueKind.Object) 
+                        {
+                            logStep?.Invoke($"Expected object for property '{token}', but got {current.ValueKind}");
+                            return false;
+                        }
+                        if (!current.TryGetProperty(token, out var next)) 
+                        {
+                            logStep?.Invoke($"Property '{token}' not found in object");
+                            return false;
+                        }
                         current = next;
+                        logStep?.Invoke($"Property '{token}' found, type: {current.ValueKind}");
                     }
                 }
             }
+            
+            logStep?.Invoke($"JsonPath navigation completed successfully, final type: {current.ValueKind}");
             value = current;
             return true;
         }
