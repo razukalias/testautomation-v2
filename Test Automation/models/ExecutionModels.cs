@@ -206,11 +206,23 @@ namespace Test_Automation.Models
                             var planVarsNested = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                             foreach (var varKvp in planVars)
                             {
-                                planVarsNested[varKvp.Key] = CoercePreviewValue(varKvp.Value);
+                                // Use current value from Variables if it exists (updated by extractors)
+                                // Otherwise use the hierarchical value
+                                object finalValue;
+                                if (Variables.TryGetValue(varKvp.Key, out var currentValue))
+                                {
+                                    finalValue = currentValue;
+                                }
+                                else
+                                {
+                                    finalValue = CoercePreviewValue(varKvp.Value);
+                                }
+                                
+                                planVarsNested[varKvp.Key] = finalValue;
                                 // Also at top level if not exists
                                 if (!result.ContainsKey(varKvp.Key))
                                 {
-                                    result[varKvp.Key] = CoercePreviewValue(varKvp.Value);
+                                    result[varKvp.Key] = finalValue;
                                 }
                             }
                             testPlansNested[planKvp.Key] = planVarsNested;
