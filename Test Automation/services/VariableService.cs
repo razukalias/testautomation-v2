@@ -106,13 +106,21 @@ namespace Test_Automation.Services
 
                 if (extractedValue == null)
                 {
-                    // JSON path didn't match - try to use the raw source value
-                    trace($"[VERBOSE] JsonPath evaluation returned null, falling back to raw source value", TraceLevel.Verbose);
-                    context.SetVariable(extractor.VariableName, sourceValue);
+                    // JSON path didn't match - only use raw source if no JsonPath specified
+                    if (string.IsNullOrWhiteSpace(extractor.JsonPath) || extractor.JsonPath == "$")
+                    {
+                        trace($"[VERBOSE] No JsonPath specified, using raw source value", TraceLevel.Verbose);
+                        context.SetVariable(extractor.VariableName, sourceValue);
+                    }
+                    else
+                    {
+                        trace($"[WARNING] JsonPath '{extractor.JsonPath}' not found in source - variable '{extractor.VariableName}' not set", TraceLevel.Warning);
+                        // Don't set the variable - JsonPath didn't match
+                    }
                 }
                 else
                 {
-                    trace($"[VERBOSE] Extraction successful: {extractedValue}", TraceLevel.Verbose);
+                    trace($"[VERBOSE] Extraction successful: {TruncateForLogging(extractedValue, 200)}", TraceLevel.Verbose);
                     context.SetVariable(extractor.VariableName, extractedValue);
                 }
             }
