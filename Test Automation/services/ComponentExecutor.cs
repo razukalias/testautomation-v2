@@ -244,6 +244,26 @@ namespace Test_Automation.Services
                     loopData.CurrentIteration = i;
                 }
 
+                // Update variables from extractors during each iteration so children can access them
+                if (loop.Extractors != null)
+                {
+                    foreach (var extractor in loop.Extractors)
+                    {
+                        // For extractors that get currentIteration, update the variable now
+                        if (extractor.JsonPath?.Contains("currentIteration") == true ||
+                            extractor.JsonPath?.Contains("CurrentIteration") == true)
+                        {
+                            context.SetVariable(extractor.VariableName, i);
+                            TraceLog(loop, result, $"[ComponentExecutor] Updated variable '{extractor.VariableName}' = {i} for iteration", TraceLevel.Verbose);
+                        }
+                        else if (extractor.JsonPath?.Contains("iterations") == true)
+                        {
+                            context.SetVariable(extractor.VariableName, iterations);
+                            TraceLog(loop, result, $"[ComponentExecutor] Updated variable '{extractor.VariableName}' = {iterations}", TraceLevel.Verbose);
+                        }
+                    }
+                }
+
                 foreach (var child in loop.Children)
                 {
                     var childResult = await ExecuteComponentTree(child, context);
