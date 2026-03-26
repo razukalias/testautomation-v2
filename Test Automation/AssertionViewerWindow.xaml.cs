@@ -15,14 +15,16 @@ namespace Test_Automation
         private readonly PlanNode _parentNode;
         private readonly Models.ExecutionContext _executionContext;
         private readonly bool _isFullHistoryMode;
+        private readonly bool _isProjectView;
         
         private List<PlanNode> _componentsWithAssertions = new();
         private List<ExecutionResult> _allResults = new();
         private List<AssertionDisplayItem> _allAssertions = new();
-        private List<BarChartDataItem> _barChartData = new();
+        private List<TestPlanGroupItem> _testPlanGroups = new();
         
         private AssertionFilterType _currentFilter = AssertionFilterType.ShowAll;
         private PlanNode? _selectedComponent = null;
+        private string? _selectedTestPlanId = null;
 
         public AssertionViewerWindow(PlanNode parentNode, Models.ExecutionContext executionContext, bool isFullHistoryMode = false)
         {
@@ -31,6 +33,7 @@ namespace Test_Automation
             _parentNode = parentNode;
             _executionContext = executionContext;
             _isFullHistoryMode = isFullHistoryMode;
+            _isProjectView = parentNode.Type == "Project";
             
             Title = $"Assertion History - {parentNode.Type}: {parentNode.Name}";
             
@@ -45,6 +48,36 @@ namespace Test_Automation
         }
 
         #region Data Models
+
+        public class TestPlanGroupItem
+        {
+            public string TestPlanId { get; set; } = string.Empty;
+            public string TestPlanName { get; set; } = string.Empty;
+            public int PassedCount { get; set; }
+            public int FailedCount { get; set; }
+            public int TotalCount => PassedCount + FailedCount;
+            public string StatusIcon => FailedCount > 0 ? "✗" : "✓";
+            public Brush StatusIconBrush => FailedCount > 0 
+                ? new SolidColorBrush(Color.FromRgb(0xB0, 0x00, 0x20)) 
+                : new SolidColorBrush(Color.FromRgb(0x16, 0x65, 0x34));
+            public ObservableCollection<ComponentStepItem> Steps { get; set; } = new();
+        }
+
+        public class ComponentStepItem
+        {
+            public string ComponentId { get; set; } = string.Empty;
+            public string ComponentName { get; set; } = string.Empty;
+            public string ComponentType { get; set; } = string.Empty;
+            public int PassedCount { get; set; }
+            public int FailedCount { get; set; }
+            public int TotalCount => PassedCount + FailedCount;
+            public string StatusIcon => FailedCount > 0 ? "✗" : "✓";
+            public Brush StatusIconBrush => FailedCount > 0 
+                ? new SolidColorBrush(Color.FromRgb(0xB0, 0x00, 0x20)) 
+                : new SolidColorBrush(Color.FromRgb(0x16, 0x65, 0x34));
+            public string TestPlanId { get; set; } = string.Empty;
+            public string TestPlanName { get; set; } = string.Empty;
+        }
 
         public class ComponentStepSummary
         {
@@ -65,6 +98,7 @@ namespace Test_Automation
             public string Status { get; set; } = string.Empty;
             public Brush StatusColor { get; set; } = Brushes.Black;
             public string ComponentName { get; set; } = string.Empty;
+            public string TestPlanName { get; set; } = string.Empty;
             public string Mode { get; set; } = string.Empty;
             public string Source { get; set; } = string.Empty;
             public string JsonPath { get; set; } = string.Empty;
@@ -75,6 +109,7 @@ namespace Test_Automation
             public string Message { get; set; } = string.Empty;
             public DateTime ExecutionTime { get; set; }
             public string ComponentId { get; set; } = string.Empty;
+            public string TestPlanId { get; set; } = string.Empty;
         }
 
         public class BarChartDataItem
@@ -87,6 +122,9 @@ namespace Test_Automation
             public double PassedHeight => TotalCount > 0 ? (double)PassedCount / TotalCount * 100 : 0;
             public double FailedHeight => TotalCount > 0 ? (double)FailedCount / TotalCount * 100 : 0;
             public string ComponentId { get; set; } = string.Empty;
+            public string TestPlanId { get; set; } = string.Empty;
+            public string TestPlanName { get; set; } = string.Empty;
+            public bool IsTestPlanHeader { get; set; } = false;
         }
 
         #endregion
@@ -116,7 +154,19 @@ namespace Test_Automation
             // 2. Get execution results for those components
             _allResults = GetExecutionResultsForComponents(_componentsWithAssertions);
             
-            // 3. Build and display data
+            // 3. Show appropriate control based on view type
+            if (_isProjectView)
+            {
+                ComponentsTreeView.Visibility = Visibility.Visible;
+                ComponentsListBox.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                ComponentsTreeView.Visibility = Visibility.Collapsed;
+                ComponentsListBox.Visibility = Visibility.Visible;
+            }
+            
+            // 4. Build and display data
             RefreshDisplay();
         }
 
@@ -162,8 +212,16 @@ namespace Test_Automation
             // Filter results based on preview mode
             var filteredResults = FilterByPreviewMode(_allResults);
             
-            // Build component summaries
-            BuildComponentSummaries(filteredResults);
+            // Build component summaries or test plan groups
+            if (_isProjectView)
+            {
+                BuildTestPlanGroups(filteredResults);
+                BuildTreeView();
+            }
+            else
+            {
+                BuildComponentSummaries(filteredResults);
+            }
             
             // Build assertion list
             BuildAssertionList(filteredResults);
@@ -192,6 +250,152 @@ namespace Test_Automation
                     .OrderBy(r => r.StartTime)
                     .ToList();
             }
+        }
+
+        private void BuildTestPlanGroups(List<ExecutionResult> results)
+        {
+            _testPlanGroups.Clear();
+            
+            // Find all TestPlan nodes in the project
+            var testPlanNodes = _parentNode.Children.Where(c => c.Type == "TestPlan").ToList();
+            
+            foreach (var testPlan in testPlanNodes)
+            {
+                // Get all components under this TestPlan that have assertions
+                var testPlanComponents = GetDescendantsWithAssertions(testPlan).ToList();
+                
+                if (testPlanComponents.Count == 0) continue;
+                
+                var group = new TestPlanGroupItem
+                {
+                    TestPlanId = testPlan.Id,
+                    TestPlanName = testPlan.Name,
+                    PassedCount = 0,
+                    FailedCount = 0
+                };
+                
+                foreach (var component in testPlanComponents)
+                {
+                    var componentResults = results
+                        .Where(r => string.Equals(r.ComponentId, component.Id, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    
+                    if (componentResults.Count == 0) continue;
+                    
+                    var passed = componentResults.Sum(r => r.AssertPassedCount);
+                    var failed = componentResults.Sum(r => r.AssertFailedCount + r.ExpectFailedCount);
+                    
+                    group.PassedCount += passed;
+                    group.FailedCount += failed;
+                    
+                    group.Steps.Add(new ComponentStepItem
+                    {
+                        ComponentId = component.Id,
+                        ComponentName = component.Name,
+                        ComponentType = component.Type,
+                        PassedCount = passed,
+                        FailedCount = failed,
+                        TestPlanId = testPlan.Id,
+                        TestPlanName = testPlan.Name
+                    });
+                }
+                
+                if (group.TotalCount > 0)
+                {
+                    _testPlanGroups.Add(group);
+                }
+            }
+        }
+
+        private void BuildTreeView()
+        {
+            ComponentsTreeView.Items.Clear();
+            
+            foreach (var group in _testPlanGroups)
+            {
+                var testPlanItem = new TreeViewItem
+                {
+                    Header = CreateTestPlanHeader(group),
+                    IsExpanded = true,
+                    Tag = group.TestPlanId
+                };
+                
+                foreach (var step in group.Steps)
+                {
+                    var stepItem = new TreeViewItem
+                    {
+                        Header = CreateStepHeader(step),
+                        Tag = step.ComponentId
+                    };
+                    testPlanItem.Items.Add(stepItem);
+                }
+                
+                ComponentsTreeView.Items.Add(testPlanItem);
+            }
+        }
+
+        private StackPanel CreateTestPlanHeader(TestPlanGroupItem group)
+        {
+            var panel = new StackPanel { Orientation = Orientation.Horizontal };
+            
+            var icon = new TextBlock
+            {
+                Text = group.StatusIcon,
+                Foreground = group.StatusIconBrush,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            panel.Children.Add(icon);
+            
+            var name = new TextBlock
+            {
+                Text = group.TestPlanName,
+                FontWeight = FontWeights.SemiBold
+            };
+            panel.Children.Add(name);
+            
+            var counts = new TextBlock
+            {
+                Text = $"  ({group.PassedCount} passed, {group.FailedCount} failed)",
+                Foreground = (Brush)FindResource("TextMutedBrush"),
+                FontSize = 11,
+                Margin = new Thickness(6, 0, 0, 0)
+            };
+            panel.Children.Add(counts);
+            
+            return panel;
+        }
+
+        private StackPanel CreateStepHeader(ComponentStepItem step)
+        {
+            var panel = new StackPanel { Orientation = Orientation.Horizontal };
+            
+            var icon = new TextBlock
+            {
+                Text = step.StatusIcon,
+                Foreground = step.StatusIconBrush,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            panel.Children.Add(icon);
+            
+            var name = new TextBlock
+            {
+                Text = step.ComponentName,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            panel.Children.Add(name);
+            
+            var counts = new TextBlock
+            {
+                Text = $"  ({step.PassedCount}P, {step.FailedCount}F)",
+                Foreground = (Brush)FindResource("TextMutedBrush"),
+                FontSize = 10,
+                Margin = new Thickness(6, 0, 0, 0)
+            };
+            panel.Children.Add(counts);
+            
+            return panel;
         }
 
         private void BuildComponentSummaries(List<ExecutionResult> results)
@@ -225,6 +429,23 @@ namespace Test_Automation
         {
             var assertions = new List<AssertionDisplayItem>();
             
+            // Build a map of component ID to TestPlan name for Project view
+            var componentToTestPlan = new Dictionary<string, string>();
+            var componentToTestPlanId = new Dictionary<string, string>();
+            
+            if (_isProjectView)
+            {
+                foreach (var testPlan in _parentNode.Children.Where(c => c.Type == "TestPlan"))
+                {
+                    var descendants = GetDescendantsWithAssertions(testPlan).ToList();
+                    foreach (var desc in descendants)
+                    {
+                        componentToTestPlan[desc.Id] = testPlan.Name;
+                        componentToTestPlanId[desc.Id] = testPlan.Id;
+                    }
+                }
+            }
+            
             foreach (var result in results)
             {
                 if (result.AssertionResults == null) continue;
@@ -238,6 +459,8 @@ namespace Test_Automation
                             ? new SolidColorBrush(Color.FromRgb(0x16, 0x65, 0x34))
                             : new SolidColorBrush(Color.FromRgb(0xB0, 0x00, 0x20)),
                         ComponentName = result.ComponentName,
+                        TestPlanName = componentToTestPlan.GetValueOrDefault(result.ComponentId, ""),
+                        TestPlanId = componentToTestPlanId.GetValueOrDefault(result.ComponentId, ""),
                         Mode = assertion.Mode,
                         Source = assertion.Source,
                         JsonPath = assertion.JsonPath,
@@ -265,32 +488,96 @@ namespace Test_Automation
 
         private void BuildBarChartData()
         {
-            _barChartData.Clear();
+            var chartData = new List<BarChartDataItem>();
             
-            int step = 1;
-            foreach (var component in _componentsWithAssertions)
+            if (_isProjectView)
             {
-                var componentResults = _allResults
-                    .Where(r => string.Equals(r.ComponentId, component.Id, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
+                // Build hierarchical bar chart for Project view
+                var testPlanNodes = _parentNode.Children.Where(c => c.Type == "TestPlan").ToList();
                 
-                if (componentResults.Count == 0) continue;
-                
-                var chartItem = new BarChartDataItem
+                foreach (var testPlan in testPlanNodes)
                 {
-                    StepLabel = $"Step {step}",
-                    ComponentName = component.Name,
-                    ComponentId = component.Id,
-                    PassedCount = componentResults.Sum(r => r.AssertPassedCount),
-                    FailedCount = componentResults.Sum(r => r.AssertFailedCount + r.ExpectFailedCount)
-                };
-                
-                _barChartData.Add(chartItem);
-                step++;
+                    var testPlanComponents = GetDescendantsWithAssertions(testPlan).ToList();
+                    if (testPlanComponents.Count == 0) continue;
+                    
+                    int testPlanPassed = 0;
+                    int testPlanFailed = 0;
+                    
+                    // First, collect totals for this test plan
+                    foreach (var component in testPlanComponents)
+                    {
+                        var componentResults = _allResults
+                            .Where(r => string.Equals(r.ComponentId, component.Id, StringComparison.OrdinalIgnoreCase))
+                            .ToList();
+                        
+                        testPlanPassed += componentResults.Sum(r => r.AssertPassedCount);
+                        testPlanFailed += componentResults.Sum(r => r.AssertFailedCount + r.ExpectFailedCount);
+                    }
+                    
+                    // Add TestPlan header
+                    chartData.Add(new BarChartDataItem
+                    {
+                        StepLabel = testPlan.Name,
+                        ComponentName = testPlan.Name,
+                        TestPlanId = testPlan.Id,
+                        TestPlanName = testPlan.Name,
+                        PassedCount = testPlanPassed,
+                        FailedCount = testPlanFailed,
+                        IsTestPlanHeader = true
+                    });
+                    
+                    // Add steps under this test plan
+                    int step = 1;
+                    foreach (var component in testPlanComponents)
+                    {
+                        var componentResults = _allResults
+                            .Where(r => string.Equals(r.ComponentId, component.Id, StringComparison.OrdinalIgnoreCase))
+                            .ToList();
+                        
+                        if (componentResults.Count == 0) continue;
+                        
+                        chartData.Add(new BarChartDataItem
+                        {
+                            StepLabel = $"{step}. {component.Name}",
+                            ComponentName = component.Name,
+                            ComponentId = component.Id,
+                            TestPlanId = testPlan.Id,
+                            TestPlanName = testPlan.Name,
+                            PassedCount = componentResults.Sum(r => r.AssertPassedCount),
+                            FailedCount = componentResults.Sum(r => r.AssertFailedCount + r.ExpectFailedCount),
+                            IsTestPlanHeader = false
+                        });
+                        step++;
+                    }
+                }
+            }
+            else
+            {
+                // Simple bar chart for non-Project views
+                int step = 1;
+                foreach (var component in _componentsWithAssertions)
+                {
+                    var componentResults = _allResults
+                        .Where(r => string.Equals(r.ComponentId, component.Id, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    
+                    if (componentResults.Count == 0) continue;
+                    
+                    chartData.Add(new BarChartDataItem
+                    {
+                        StepLabel = $"Step {step}",
+                        ComponentName = component.Name,
+                        ComponentId = component.Id,
+                        PassedCount = componentResults.Sum(r => r.AssertPassedCount),
+                        FailedCount = componentResults.Sum(r => r.AssertFailedCount + r.ExpectFailedCount),
+                        IsTestPlanHeader = false
+                    });
+                    step++;
+                }
             }
             
             BarChartItemsControl.ItemsSource = null;
-            BarChartItemsControl.ItemsSource = _barChartData;
+            BarChartItemsControl.ItemsSource = chartData;
         }
 
         private void ApplyFilterAndUpdateGrid()
@@ -306,8 +593,15 @@ namespace Test_Automation
                 filteredAssertions = _allAssertions;
             }
             
-            // If a component is selected, filter to that component
-            if (_selectedComponent != null)
+            // If a test plan is selected (Project view), filter to that test plan
+            if (_selectedTestPlanId != null)
+            {
+                filteredAssertions = filteredAssertions
+                    .Where(a => string.Equals(a.TestPlanId, _selectedTestPlanId, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+            // If a component is selected (non-Project view), filter to that component
+            else if (_selectedComponent != null)
             {
                 filteredAssertions = filteredAssertions
                     .Where(a => string.Equals(a.ComponentId, _selectedComponent.Id, StringComparison.OrdinalIgnoreCase))
@@ -318,8 +612,17 @@ namespace Test_Automation
             
             // Update assertion list title
             var filterLabel = _currentFilter == AssertionFilterType.FailedOnly ? " (Failed Only)" : "";
-            var componentLabel = _selectedComponent != null ? $" - {_selectedComponent.Name}" : "";
-            AssertionListTitle.Text = $"Assertions ({filteredAssertions.Count}){filterLabel}{componentLabel}";
+            var selectionLabel = "";
+            if (_selectedTestPlanId != null)
+            {
+                var selectedGroup = _testPlanGroups.FirstOrDefault(g => g.TestPlanId == _selectedTestPlanId);
+                selectionLabel = selectedGroup != null ? $" - {selectedGroup.TestPlanName}" : "";
+            }
+            else if (_selectedComponent != null)
+            {
+                selectionLabel = $" - {_selectedComponent.Name}";
+            }
+            AssertionListTitle.Text = $"Assertions ({filteredAssertions.Count}){filterLabel}{selectionLabel}";
         }
 
         private void UpdateSummaryText()
@@ -354,26 +657,43 @@ namespace Test_Automation
 
         private void ComponentsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            _selectedComponent = null;
+            _selectedTestPlanId = null;
+            
             if (ComponentsListBox.SelectedItem is ComponentStepSummary selected)
             {
                 _selectedComponent = _componentsWithAssertions
                     .FirstOrDefault(c => string.Equals(c.Id, selected.ComponentId, StringComparison.OrdinalIgnoreCase));
             }
-            else
+            
+            ApplyFilterAndUpdateGrid();
+        }
+
+        private void ComponentsTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            _selectedComponent = null;
+            _selectedTestPlanId = null;
+            
+            if (ComponentsTreeView.SelectedItem is TreeViewItem selectedItem)
             {
-                _selectedComponent = null;
+                if (selectedItem.Tag is string tagId)
+                {
+                    // Check if it's a TestPlan or a component
+                    var testPlan = _testPlanGroups.FirstOrDefault(g => g.TestPlanId == tagId);
+                    if (testPlan != null)
+                    {
+                        _selectedTestPlanId = tagId;
+                    }
+                    else
+                    {
+                        // It's a component
+                        _selectedComponent = _componentsWithAssertions
+                            .FirstOrDefault(c => string.Equals(c.Id, tagId, StringComparison.OrdinalIgnoreCase));
+                    }
+                }
             }
             
             ApplyFilterAndUpdateGrid();
-            
-            // Update bar chart highlighting (optional enhancement)
-            UpdateBarChartHighlight();
-        }
-
-        private void UpdateBarChartHighlight()
-        {
-            // Could add visual highlighting to the selected step in the bar chart
-            // For now, we'll keep it simple
         }
 
         #endregion

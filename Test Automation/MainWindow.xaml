@@ -238,6 +238,12 @@
                                 Width="180"
                                 Click="ClearChildrenPreviewButton_Click"
                                 Visibility="{Binding HasSelectedNodeChildren, Converter={StaticResource BoolToVisibilityConverter}}" />
+                        <Button Content="📊 View Assertions"
+                                Width="140"
+                                Margin="10,0,0,0"
+                                Click="ViewAssertionsButton_Click"
+                                ToolTip="View assertion history for all TestPlans"
+                                Visibility="{Binding IsProjectSelected, Converter={StaticResource BoolToVisibilityConverter}}" />
                     </StackPanel>
 
                         </StackPanel>

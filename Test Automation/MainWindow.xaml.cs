@@ -3555,7 +3555,7 @@ namespace Test_Automation
             if (SelectedNode == null) return;
 
             // Verify this is a parent component type
-            var parentTypes = new[] { "TestPlan", "Loop", "Foreach", "If", "Threads" };
+            var parentTypes = new[] { "Project", "TestPlan", "Loop", "Foreach", "If", "Threads" };
             if (!parentTypes.Contains(SelectedNode.Type)) return;
 
             // Check if there are any child components
