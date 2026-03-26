@@ -183,12 +183,37 @@ namespace Test_Automation.Services
             // Handle PreviewOutput - raw component output without metadata
             if (string.Equals(source, "PreviewOutput", StringComparison.OrdinalIgnoreCase))
             {
+                // Script component
                 if (result?.Data is ScriptData script) return script.ExecutionResult;
+                // HTTP component
                 if (result?.Data is HttpData http) return http.ResponseBody;
+                // GraphQL component
                 if (result?.Data is GraphQlData gql) return gql.ResponseBody;
+                // SQL component
                 if (result?.Data is SqlData sql) return sql.QueryResult != null ? JsonSerializer.Serialize(sql.QueryResult) : string.Empty;
+                // Dataset component
+                if (result?.Data is DatasetData ds) return ds.Rows != null ? JsonSerializer.Serialize(ds.Rows) : string.Empty;
+                // Foreach component
                 if (result?.Data is ForeachData fe) return fe.CurrentItem != null ? JsonSerializer.Serialize(fe.CurrentItem) : string.Empty;
+                // Loop component
+                if (result?.Data is Test_Automation.Models.LoopData loop) return JsonSerializer.Serialize(new { iterations = loop.Iterations, currentIteration = loop.CurrentIteration });
+                // If component
+                if (result?.Data is Test_Automation.Models.IfData ifData) return JsonSerializer.Serialize(new { condition = ifData.Condition, conditionMet = ifData.ConditionMet });
+                // Threads component
+                if (result?.Data is Test_Automation.Models.ThreadsData threads) return JsonSerializer.Serialize(new { threadCount = threads.ThreadCount, rampUpTime = threads.RampUpTime });
+                // Timer component
+                if (result?.Data is TimerData timer) return JsonSerializer.Serialize(new { delayMs = timer.DelayMs, executed = timer.Executed });
+                // Config component
+                if (result?.Data is ConfigData config) return JsonSerializer.Serialize(config.Configurations);
+                // TestPlan component
+                if (result?.Data is TestPlanData tp) return JsonSerializer.Serialize(new { testPlanName = tp.TestPlanName, status = tp.Status });
+                // Assert component
+                if (result?.Data is AssertData assert) return JsonSerializer.Serialize(new { passed = assert.Passed, errorMessage = assert.ErrorMessage, expected = assert.ExpectedValue, actual = assert.ActualValue });
+                // VariableExtractor component
+                if (result?.Data is VariableExtractorData varExt) return JsonSerializer.Serialize(new { variableName = varExt.VariableName, extractedValue = varExt.ExtractedValue });
+                // Fallback - check Properties for result
                 if (result?.Data is Test_Automation.Models.ComponentData compData && compData.Properties.TryGetValue("result", out var rawResult)) return rawResult?.ToString() ?? string.Empty;
+                // Generic fallback
                 return result?.Output ?? string.Empty;
             }
 
@@ -199,13 +224,55 @@ namespace Test_Automation.Services
                 if (result == null) return JsonSerializer.Serialize(new { message = "Response will be available after execution." });
                 
                 object? data = null;
-                if (componentData is HttpData http) data = new { runs = new[] { new { responseStatus = http.ResponseStatus, responseBody = http.ResponseBody } } };
-                else if (componentData is GraphQlData gql) data = new { runs = new[] { new { responseStatus = gql.ResponseStatus, responseBody = gql.ResponseBody } } };
-                else if (componentData is SqlData sql) data = new { runs = new[] { new { rows = sql.QueryResult } } };
-                else if (componentData is ForeachData fe) data = fe.CurrentItem;
+                
+                // HTTP component
+                if (componentData is HttpData http) 
+                    data = new { runs = new[] { new { responseStatus = http.ResponseStatus, responseBody = http.ResponseBody, output = http.ResponseBody } } };
+                // GraphQL component
+                else if (componentData is GraphQlData gql) 
+                    data = new { runs = new[] { new { responseStatus = gql.ResponseStatus, responseBody = gql.ResponseBody, output = gql.ResponseBody } } };
+                // SQL component
+                else if (componentData is SqlData sql) 
+                    data = new { runs = new[] { new { rows = sql.QueryResult, output = JsonSerializer.Serialize(sql.QueryResult) } } };
+                // Dataset component
+                else if (componentData is DatasetData ds) 
+                    data = new { runs = new[] { new { rows = ds.Rows, output = JsonSerializer.Serialize(ds.Rows) } } };
+                // Script component - get result from Properties
+                else if (componentData is ScriptData script) 
+                    data = new { runs = new[] { new { status = result.Status, output = script.ExecutionResult, scriptCode = script.ScriptCode, data = componentData } } };
+                // Loop component
+                else if (componentData is Test_Automation.Models.LoopData loop) 
+                    data = new { runs = new[] { new { status = result.Status, output = JsonSerializer.Serialize(new { iterations = loop.Iterations, currentIteration = loop.CurrentIteration, childComponents = loop.ChildComponents }), data = componentData } } };
+                // Foreach component
+                else if (componentData is ForeachData fe) 
+                    data = new { runs = new[] { new { status = result.Status, output = JsonSerializer.Serialize(new { currentIndex = fe.CurrentIndex, currentItem = fe.CurrentItem, outputVariable = fe.OutputVariable }), currentItem = fe.CurrentItem, data = componentData } } };
+                // If component
+                else if (componentData is Test_Automation.Models.IfData ifData) 
+                    data = new { runs = new[] { new { status = result.Status, output = JsonSerializer.Serialize(new { condition = ifData.Condition, conditionMet = ifData.ConditionMet }), data = componentData } } };
+                // Threads component
+                else if (componentData is Test_Automation.Models.ThreadsData threads) 
+                    data = new { runs = new[] { new { status = result.Status, output = JsonSerializer.Serialize(new { threadCount = threads.ThreadCount, rampUpTime = threads.RampUpTime }), data = componentData } } };
+                // Timer component
+                else if (componentData is TimerData timer) 
+                    data = new { runs = new[] { new { status = result.Status, output = JsonSerializer.Serialize(new { delayMs = timer.DelayMs, executed = timer.Executed }), data = componentData } } };
+                // Config component
+                else if (componentData is ConfigData config) 
+                    data = new { runs = new[] { new { status = result.Status, output = JsonSerializer.Serialize(config.Configurations), data = componentData } } };
+                // TestPlan component
+                else if (componentData is TestPlanData tp) 
+                    data = new { runs = new[] { new { status = result.Status, output = JsonSerializer.Serialize(new { testPlanName = tp.TestPlanName, status = tp.Status }), data = componentData } } };
+                // Assert component
+                else if (componentData is AssertData assert) 
+                    data = new { runs = new[] { new { status = result.Status, output = JsonSerializer.Serialize(new { passed = assert.Passed, errorMessage = assert.ErrorMessage, expected = assert.ExpectedValue, actual = assert.ActualValue }), data = componentData } } };
+                // VariableExtractor component
+                else if (componentData is VariableExtractorData varExt) 
+                    data = new { runs = new[] { new { status = result.Status, output = JsonSerializer.Serialize(new { variableName = varExt.VariableName, extractedValue = varExt.ExtractedValue }), data = componentData } } };
+                // Fallback - check if Properties has result
                 else if (componentData is Test_Automation.Models.ComponentData compData && compData.Properties.TryGetValue("result", out var scriptResult)) 
                     data = new { runs = new[] { new { status = result.Status, output = scriptResult?.ToString() ?? string.Empty, data = componentData } } };
-                else data = new { runs = new[] { new { status = result.Status, data = componentData } } };
+                // Generic fallback
+                else 
+                    data = new { runs = new[] { new { status = result.Status, output = result.Output ?? string.Empty, data = componentData } } };
 
                 var json = JsonSerializer.Serialize(data);
                 TraceFunction(trace, output: "PreviewResponseResult");
@@ -216,9 +283,10 @@ namespace Test_Automation.Services
             {
                 if (result == null) return JsonSerializer.Serialize(new { message = "Request will be available after execution." });
                 object? data = null;
-                if (componentData is HttpData http) data = new { runs = new[] { new { method = http.Method, url = http.Url, body = http.Body } } };
-                else if (componentData is GraphQlData gql) data = new { runs = new[] { new { query = gql.Query, variables = gql.Variables } } };
-                else data = new { runs = new[] { new { data = componentData } } };
+                if (componentData is HttpData http) data = new { runs = new[] { new { method = http.Method, url = http.Url, body = http.Body, output = http.ResponseBody } } };
+                else if (componentData is GraphQlData gql) data = new { runs = new[] { new { query = gql.Query, variables = gql.Variables, output = gql.ResponseBody } } };
+                else if (componentData is SqlData sql) data = new { runs = new[] { new { query = sql.Query, output = JsonSerializer.Serialize(sql.QueryResult) } } };
+                else data = new { runs = new[] { new { data = componentData, output = result.Output ?? string.Empty } } };
 
                 var json = JsonSerializer.Serialize(data);
                 TraceFunction(trace, output: "PreviewRequestResult");
