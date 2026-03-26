@@ -211,7 +211,8 @@ namespace Test_Automation.Models
                                 object finalValue;
                                 if (Variables.TryGetValue(varKvp.Key, out var currentValue))
                                 {
-                                    finalValue = currentValue;
+                                    // Coerce the value to parse JSON strings as objects
+                                    finalValue = CoercePreviewValue(currentValue);
                                 }
                                 else
                                 {
