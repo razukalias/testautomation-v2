@@ -374,8 +374,8 @@ namespace Test_Automation.Services
                     }
                 }
             }
-            trace?.Invoke($"[VERBOSE] ExtractValue: Returning original sourceValue as fallback", TraceLevel.Verbose);
-            return sourceValue;
+            trace?.Invoke($"[VERBOSE] ExtractValue: Returning null - JsonPath '{jsonPath}' not found", TraceLevel.Verbose);
+            return null;
         }
 
         private static string TruncateForLogging(object? value, int maxLength = 200)
