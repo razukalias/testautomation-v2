@@ -5192,6 +5192,44 @@ namespace Test_Automation
                 return;
             }
 
+            if (nodeType == "Loop")
+            {
+                var iterations = int.TryParse(GetSettingValue("Iterations", "1"), out var iter) ? iter : 1;
+                var latestLoopExecution = nodeExecutionResults
+                    .OrderByDescending(result => result.EndTime ?? result.StartTime)
+                    .FirstOrDefault();
+                var lastLoopData = GetLastExecutionData<Test_Automation.Models.LoopData>(nodeId);
+                
+                // Show currentIteration in output tab
+                PreviewOutput = lastLoopData?.CurrentIteration.ToString() ?? "0";
+                
+                PreviewRequest = JsonSerializer.Serialize(new
+                {
+                    component = nodeName,
+                    type = "Loop",
+                    iterations,
+                    currentIteration = lastLoopData?.CurrentIteration ?? 0
+                }, PrettyJsonOptions);
+
+                PreviewResponse = JsonSerializer.Serialize(new
+                {
+                    runs = nodeExecutionResults.Select(result => new
+                    {
+                        threadIndex = result.ThreadIndex,
+                        startTime = result.StartTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                        endTime = result.EndTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                        durationMs = result.DurationMs,
+                        status = result.Status,
+                        data = result.Data
+                    }).ToList()
+                }, PrettyJsonOptions);
+
+                PreviewLogs = $"[{now}] Loop preview refreshed\n[{now}] Iterations: {iterations}\n[{now}] Current iteration: {lastLoopData?.CurrentIteration ?? 0}";
+                AppendExtractionPreview(now);
+                RebuildPreviewLogsForSelectedNode();
+                return;
+            }
+
             var settings = SelectedNode.Settings
                 .Where(setting => !string.IsNullOrWhiteSpace(setting.Key))
                 .ToDictionary(setting => setting.Key, setting => setting.Value);
