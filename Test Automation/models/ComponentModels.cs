@@ -276,4 +276,94 @@ public class VariableExtractorData : ComponentData
         [JsonPropertyName("childComponents")]
         public List<string> ChildComponents { get; set; } = new List<string>();
     }
+
+    /// <summary>
+    /// AssertView component model - displays assertion results from other components
+    /// </summary>
+    public class AssertViewData : ComponentData
+    {
+        [JsonPropertyName("boundComponentIds")]
+        public List<string> BoundComponentIds { get; set; } = new List<string>();
+
+        [JsonPropertyName("assertionResults")]
+        public List<AssertionResultItem> AssertionResults { get; set; } = new List<AssertionResultItem>();
+
+        [JsonPropertyName("history")]
+        public List<AssertionHistoryItem> History { get; set; } = new List<AssertionHistoryItem>();
+
+        [JsonPropertyName("totalPassed")]
+        public int TotalPassed { get; set; }
+
+        [JsonPropertyName("totalFailed")]
+        public int TotalFailed { get; set; }
+
+        [JsonPropertyName("durationMs")]
+        public long DurationMs { get; set; }
+    }
+
+    /// <summary>
+    /// Single assertion result item for AssertView
+    /// </summary>
+    public class AssertionResultItem
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("componentId")]
+        public string ComponentId { get; set; } = string.Empty;
+
+        [JsonPropertyName("componentName")]
+        public string ComponentName { get; set; } = string.Empty;
+
+        [JsonPropertyName("source")]
+        public string Source { get; set; } = string.Empty;
+
+        [JsonPropertyName("jsonPath")]
+        public string JsonPath { get; set; } = string.Empty;
+
+        [JsonPropertyName("condition")]
+        public string Condition { get; set; } = string.Empty;
+
+        [JsonPropertyName("expected")]
+        public string Expected { get; set; } = string.Empty;
+
+        [JsonPropertyName("actual")]
+        public string Actual { get; set; } = string.Empty;
+
+        [JsonPropertyName("passed")]
+        public bool Passed { get; set; }
+
+        [JsonPropertyName("errorMessage")]
+        public string ErrorMessage { get; set; } = string.Empty;
+
+        [JsonPropertyName("timestamp")]
+        public DateTime Timestamp { get; set; }
+
+        [JsonPropertyName("durationMs")]
+        public long DurationMs { get; set; }
+    }
+
+    /// <summary>
+    /// History item for assertion results
+    /// </summary>
+    public class AssertionHistoryItem
+    {
+        [JsonPropertyName("runId")]
+        public string RunId { get; set; } = string.Empty;
+
+        [JsonPropertyName("timestamp")]
+        public DateTime Timestamp { get; set; }
+
+        [JsonPropertyName("totalPassed")]
+        public int TotalPassed { get; set; }
+
+        [JsonPropertyName("totalFailed")]
+        public int TotalFailed { get; set; }
+
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = "passed";
+
+        [JsonPropertyName("durationMs")]
+        public long DurationMs { get; set; }
+    }
 }

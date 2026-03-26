@@ -24,6 +24,7 @@ namespace Test_Automation.Factories
                 "config" => new Config(),
                 "testplan" => new TestPlan(),
                 "assert" => new Assert(),
+                "assertview" => new AssertView(),
                 "variableextractor" => new VariableExtractor(),
                 "script" => new Script(),
                 _ => throw new ArgumentException($"Unknown component type: {componentType}")
