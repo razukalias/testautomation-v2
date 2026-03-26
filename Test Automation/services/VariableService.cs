@@ -240,9 +240,13 @@ namespace Test_Automation.Services
                 // Script component - get result from Properties
                 else if (componentData is ScriptData script) 
                     data = new { runs = new[] { new { status = result.Status, output = script.ExecutionResult, scriptCode = script.ScriptCode, data = componentData } } };
-                // Loop component
+                // Loop component - include LoopData properties directly in data for easy access
                 else if (componentData is Test_Automation.Models.LoopData loop) 
-                    data = new { runs = new[] { new { status = result.Status, output = JsonSerializer.Serialize(new { iterations = loop.Iterations, currentIteration = loop.CurrentIteration, childComponents = loop.ChildComponents }), data = componentData } } };
+                    data = new { runs = new[] { new { 
+                        status = result.Status, 
+                        output = JsonSerializer.Serialize(new { iterations = loop.Iterations, currentIteration = loop.CurrentIteration, childComponents = loop.ChildComponents }), 
+                        data = new { iterations = loop.Iterations, currentIteration = loop.CurrentIteration, childComponents = loop.ChildComponents, id = ((ComponentData)componentData).Properties.GetValueOrDefault("id")?.ToString(), componentName = ((ComponentData)componentData).Properties.GetValueOrDefault("componentName")?.ToString() }
+                    } } };
                 // Foreach component
                 else if (componentData is ForeachData fe) 
                     data = new { runs = new[] { new { status = result.Status, output = JsonSerializer.Serialize(new { currentIndex = fe.CurrentIndex, currentItem = fe.CurrentItem, outputVariable = fe.OutputVariable }), currentItem = fe.CurrentItem, data = componentData } } };
