@@ -254,6 +254,13 @@ namespace Test_Automation.Services
                 }
             }
 
+            // Re-apply variable extractors after loop completes so they capture final state
+            if (loop.Extractors != null && loop.Extractors.Count > 0)
+            {
+                TraceLog(loop, result, $"[ComponentExecutor] Re-applying {loop.Extractors.Count} variable extractors after loop completion", TraceLevel.Verbose);
+                _variableService.ApplyVariableExtractors(loop, context, result.Data as ComponentData, (msg, level) => TraceLog(loop, result, msg, level), result);
+            }
+
             return result;
         }
 
@@ -343,6 +350,13 @@ namespace Test_Automation.Services
                 }
             }
 
+            // Re-apply variable extractors after foreach completes so they capture final state
+            if (foreachComponent.Extractors != null && foreachComponent.Extractors.Count > 0)
+            {
+                TraceLog(foreachComponent, result, $"[ComponentExecutor] Re-applying {foreachComponent.Extractors.Count} variable extractors after foreach completion", TraceLevel.Verbose);
+                _variableService.ApplyVariableExtractors(foreachComponent, context, result.Data as ComponentData, (msg, level) => TraceLog(foreachComponent, result, msg, level), result);
+            }
+
             return result;
         }
 
@@ -382,6 +396,14 @@ namespace Test_Automation.Services
                 .ToList();
 
             await Task.WhenAll(taskList);
+
+            // Re-apply variable extractors after threads complete so they capture final state
+            if (threads.Extractors != null && threads.Extractors.Count > 0)
+            {
+                TraceLog(threads, result, $"[ComponentExecutor] Re-applying {threads.Extractors.Count} variable extractors after threads completion", TraceLevel.Verbose);
+                _variableService.ApplyVariableExtractors(threads, context, result.Data as ComponentData, (msg, level) => TraceLog(threads, result, msg, level), result);
+            }
+
             return result;
         }
 
