@@ -506,16 +506,24 @@ namespace Test_Automation.Services
                 
                 if (current.ValueKind == JsonValueKind.String)
                 {
-                    try 
-                    { 
-                        using var innerDoc = JsonDocument.Parse(current.GetString()!); 
-                        current = innerDoc.RootElement.Clone();
-                        logStep?.Invoke($"Parsed nested JSON string, new type: {current.ValueKind}");
-                    }
-                    catch (Exception ex)
-                    { 
-                        logStep?.Invoke($"Failed to parse nested JSON string: {ex.Message}");
-                        return false; 
+                    var stringValue = current.GetString();
+                    if (!string.IsNullOrWhiteSpace(stringValue) && 
+                        (stringValue.TrimStart().StartsWith("{") || stringValue.TrimStart().StartsWith("[")))
+                    {
+                        try 
+                        { 
+                            using var innerDoc = JsonDocument.Parse(stringValue); 
+                            // Clone and serialize to avoid disposal issues
+                            var rawText = innerDoc.RootElement.GetRawText();
+                            using var newDoc = JsonDocument.Parse(rawText);
+                            current = newDoc.RootElement.Clone();
+                            logStep?.Invoke($"Parsed nested JSON string, new type: {current.ValueKind}");
+                        }
+                        catch (Exception ex)
+                        { 
+                            logStep?.Invoke($"Failed to parse nested JSON string: {ex.Message}");
+                            return false; 
+                        }
                     }
                 }
 
@@ -570,16 +578,23 @@ namespace Test_Automation.Services
                         {
                             if (current.ValueKind == JsonValueKind.String)
                             {
-                                try 
-                                { 
-                                    using var innerDoc = JsonDocument.Parse(current.GetString()!); 
-                                    current = innerDoc.RootElement.Clone();
-                                    logStep?.Invoke($"Parsed nested JSON string in brackets, new type: {current.ValueKind}");
-                                }
-                                catch (Exception ex)
-                                { 
-                                    logStep?.Invoke($"Failed to parse nested JSON in brackets: {ex.Message}");
-                                    return false; 
+                                var stringValue = current.GetString();
+                                if (!string.IsNullOrWhiteSpace(stringValue) && 
+                                    (stringValue.TrimStart().StartsWith("{") || stringValue.TrimStart().StartsWith("[")))
+                                {
+                                    try 
+                                    { 
+                                        using var innerDoc = JsonDocument.Parse(stringValue); 
+                                        var rawText = innerDoc.RootElement.GetRawText();
+                                        using var newDoc = JsonDocument.Parse(rawText);
+                                        current = newDoc.RootElement.Clone();
+                                        logStep?.Invoke($"Parsed nested JSON string in brackets, new type: {current.ValueKind}");
+                                    }
+                                    catch (Exception ex)
+                                    { 
+                                        logStep?.Invoke($"Failed to parse nested JSON in brackets: {ex.Message}");
+                                        return false; 
+                                    }
                                 }
                             }
                             if (innerToken.StartsWith("[") && innerToken.EndsWith("]"))
