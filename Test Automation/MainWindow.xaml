@@ -1134,14 +1134,23 @@
 
                         <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsLoopSelected, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <Grid Background="{DynamicResource WindowBackgroundBrush}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="100" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Iterations" />
-                            <TextBox Grid.Column="1" Text="{Binding LoopIterations, UpdateSourceTrigger=PropertyChanged}" />
-                        </Grid>
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Iterations" />
+                                <TextBox Grid.Column="1" Text="{Binding LoopIterations, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                            
+                            <!-- View Assertions Button for Loop -->
+                            <Button Content="📊 View Assertions" 
+                                    Height="32"
+                                    Click="ViewAssertionsButton_Click"
+                                    ToolTip="View assertion history for all child components"
+                                    HorizontalAlignment="Stretch"/>
+                        </StackPanel>
                     </Border>
 
                         <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
@@ -1165,19 +1174,35 @@
                                 <TextBox Grid.Column="1" Text="{Binding ForeachOutputVariable, UpdateSourceTrigger=PropertyChanged}"
                                          ToolTip="Optional variable name that stores the current item for use by child components (defaults to CurrentItem)." />
                             </Grid>
+                            
+                            <!-- View Assertions Button for Foreach -->
+                            <Button Content="📊 View Assertions" 
+                                    Height="32" Margin="0,8,0,0"
+                                    Click="ViewAssertionsButton_Click"
+                                    ToolTip="View assertion history for all child components"
+                                    HorizontalAlignment="Stretch"/>
                         </StackPanel>
                     </Border>
 
                         <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsIfSelected, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <Grid Background="{DynamicResource WindowBackgroundBrush}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="100" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Condition" />
-                            <TextBox Grid.Column="1" Text="{Binding IfCondition, UpdateSourceTrigger=PropertyChanged}" />
-                        </Grid>
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Condition" />
+                                <TextBox Grid.Column="1" Text="{Binding IfCondition, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                            
+                            <!-- View Assertions Button for If -->
+                            <Button Content="📊 View Assertions" 
+                                    Height="32"
+                                    Click="ViewAssertionsButton_Click"
+                                    ToolTip="View assertion history for all child components"
+                                    HorizontalAlignment="Stretch"/>
+                        </StackPanel>
                     </Border>
 
                         <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
@@ -1200,6 +1225,13 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="RampUp (s)" />
                                 <TextBox Grid.Column="1" Text="{Binding RampUpSeconds, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
+                            
+                            <!-- View Assertions Button for Threads -->
+                            <Button Content="📊 View Assertions" 
+                                    Height="32" Margin="0,8,0,0"
+                                    Click="ViewAssertionsButton_Click"
+                                    ToolTip="View assertion history for all child components"
+                                    HorizontalAlignment="Stretch"/>
                         </StackPanel>
                     </Border>
 
@@ -1314,6 +1346,14 @@
                                           SelectedItem="{Binding SelectedExecutionType, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
                             <TextBlock Text="PreExecute runs first, PostExecute runs last" Foreground="{DynamicResource TextMutedBrush}" FontStyle="Italic" Margin="0,0,0,6" />
+                            
+                            <!-- View Assertions Button for TestPlan -->
+                            <Button Content="📊 View Assertions" 
+                                    Height="32" Margin="0,8,0,0"
+                                    Click="ViewAssertionsButton_Click"
+                                    ToolTip="View assertion history for all child components"
+                                    HorizontalAlignment="Stretch"/>
+                            
                             <TextBlock Text="Local Variables" FontWeight="SemiBold" Margin="0,10,0,6" />
                             <ScrollViewer MinHeight="80" VerticalScrollBarVisibility="Auto" VerticalAlignment="Stretch">
                                 <ItemsControl ItemsSource="{Binding TestPlanVariablesForEditor}">

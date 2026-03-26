@@ -3550,6 +3550,43 @@ namespace Test_Automation
             RebuildVariableUsageMap();
         }
 
+        private void ViewAssertionsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SelectedNode == null) return;
+
+            // Verify this is a parent component type
+            var parentTypes = new[] { "TestPlan", "Loop", "Foreach", "If", "Threads" };
+            if (!parentTypes.Contains(SelectedNode.Type)) return;
+
+            // Check if there are any child components
+            if (SelectedNode.Children.Count == 0)
+            {
+                MessageBox.Show("This component has no child components.",
+                                "No Children", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Check if there's execution data
+            if (_lastExecutionContext == null)
+            {
+                MessageBox.Show("No execution data available. Run the test plan first.",
+                                "No Data", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Check if preview data mode is full history
+            bool isFullHistory = string.Equals(SelectedPreviewDataMode, "Full History",
+                                               StringComparison.OrdinalIgnoreCase);
+
+            // Open the Assertion Viewer dialog
+            var viewer = new AssertionViewerWindow(SelectedNode, _lastExecutionContext, isFullHistory)
+            {
+                Owner = this
+            };
+
+            viewer.ShowDialog();
+        }
+
         private void AddProjectUrlBaseButton_Click(object sender, RoutedEventArgs e)
         {
             if (SelectedNode == null || !string.Equals(SelectedNode.Type, "Project", StringComparison.OrdinalIgnoreCase))
