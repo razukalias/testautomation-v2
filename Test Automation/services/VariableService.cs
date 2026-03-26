@@ -203,6 +203,8 @@ namespace Test_Automation.Services
                 else if (componentData is GraphQlData gql) data = new { runs = new[] { new { responseStatus = gql.ResponseStatus, responseBody = gql.ResponseBody } } };
                 else if (componentData is SqlData sql) data = new { runs = new[] { new { rows = sql.QueryResult } } };
                 else if (componentData is ForeachData fe) data = fe.CurrentItem;
+                else if (componentData is Test_Automation.Models.ComponentData compData && compData.Properties.TryGetValue("result", out var scriptResult)) 
+                    data = new { runs = new[] { new { status = result.Status, output = scriptResult?.ToString() ?? string.Empty, data = componentData } } };
                 else data = new { runs = new[] { new { status = result.Status, data = componentData } } };
 
                 var json = JsonSerializer.Serialize(data);
