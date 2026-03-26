@@ -196,7 +196,7 @@ namespace Test_Automation.Services
                 // Foreach component
                 if (result?.Data is ForeachData fe) return fe.CurrentItem != null ? JsonSerializer.Serialize(fe.CurrentItem) : string.Empty;
                 // Loop component
-                if (result?.Data is Test_Automation.Models.LoopData loop) return JsonSerializer.Serialize(new { iterations = loop.Iterations, currentIteration = loop.CurrentIteration });
+                if (result?.Data is Test_Automation.Models.LoopData loop) return loop.CurrentIteration.ToString();
                 // If component
                 if (result?.Data is Test_Automation.Models.IfData ifData) return JsonSerializer.Serialize(new { condition = ifData.Condition, conditionMet = ifData.ConditionMet });
                 // Threads component
