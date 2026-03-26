@@ -87,7 +87,18 @@ namespace Test_Automation.Services
                 TraceLog(component, result, $"[ComponentExecutor] Executing component implementation: {component.GetType().Name}", TraceLevel.Verbose);
                 var componentData = await component.Execute(context);
                 result.Data = componentData;
-                result.Output = componentData?.ToString() ?? string.Empty;
+                
+                // Set Output based on component type
+                result.Output = componentData switch
+                {
+                    LoopData loop => loop.CurrentIteration.ToString(),
+                    ForeachData fe => fe.CurrentIndex.ToString(),
+                    ScriptData script => script.ExecutionResult,
+                    HttpData http => http.ResponseBody,
+                    GraphQlData gql => gql.ResponseBody,
+                    SqlData sql => sql.QueryResult != null ? JsonSerializer.Serialize(sql.QueryResult) : string.Empty,
+                    _ => componentData?.ToString() ?? string.Empty
+                };
 
                 if (componentData != null)
                 {
