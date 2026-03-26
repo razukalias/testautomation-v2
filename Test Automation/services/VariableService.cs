@@ -211,8 +211,6 @@ namespace Test_Automation.Services
                 if (result?.Data is AssertData assert) return JsonSerializer.Serialize(new { passed = assert.Passed, errorMessage = assert.ErrorMessage, expected = assert.ExpectedValue, actual = assert.ActualValue });
                 // VariableExtractor component
                 if (result?.Data is VariableExtractorData varExt) return JsonSerializer.Serialize(new { variableName = varExt.VariableName, extractedValue = varExt.ExtractedValue });
-                // AssertView component
-                if (result?.Data is Test_Automation.Models.AssertViewData assertView) return JsonSerializer.Serialize(new { totalPassed = assertView.TotalPassed, totalFailed = assertView.TotalFailed, durationMs = assertView.DurationMs, results = assertView.AssertionResults });
                 // Fallback - check Properties for result
                 if (result?.Data is Test_Automation.Models.ComponentData compData && compData.Properties.TryGetValue("result", out var rawResult)) return rawResult?.ToString() ?? string.Empty;
                 // Generic fallback
@@ -273,18 +271,6 @@ namespace Test_Automation.Services
                 // VariableExtractor component
                 else if (componentData is VariableExtractorData varExt) 
                     data = new { runs = new[] { new { status = result.Status, output = JsonSerializer.Serialize(new { variableName = varExt.VariableName, extractedValue = varExt.ExtractedValue }), data = componentData } } };
-                // AssertView component
-                else if (componentData is Test_Automation.Models.AssertViewData assertView) 
-                    data = new { runs = new[] { new { 
-                        status = result.Status, 
-                        output = JsonSerializer.Serialize(new { 
-                            totalPassed = assertView.TotalPassed, 
-                            totalFailed = assertView.TotalFailed, 
-                            durationMs = assertView.DurationMs,
-                            results = assertView.AssertionResults 
-                        }), 
-                        data = componentData 
-                    } } };
                 // Fallback - check if Properties has result
                 else if (componentData is Test_Automation.Models.ComponentData compData && compData.Properties.TryGetValue("result", out var scriptResult)) 
                     data = new { runs = new[] { new { status = result.Status, output = scriptResult?.ToString() ?? string.Empty, data = componentData } } };

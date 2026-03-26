@@ -206,11 +206,6 @@ namespace Test_Automation.Services
                 return await ExecuteForeach(foreachComponent, context);
             }
 
-            if (component is Test_Automation.Componentes.AssertView assertView)
-            {
-                return await ExecuteComponent(assertView, context);
-            }
-
             return await ExecuteWithChildren(component, context);
         }
 
