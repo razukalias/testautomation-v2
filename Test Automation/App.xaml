@@ -5,10 +5,7 @@
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Themes/LightTheme.xaml"/>
-                <ResourceDictionary Source="Themes/Styles.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
+            <!-- Custom theme and styles removed for default Windows styling -->
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -7,6 +7,16 @@
         MinHeight="480"
         MinWidth="700"
         WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <Style TargetType="TextBox">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Style.Triggers>
+                <Trigger Property="AcceptsReturn" Value="True">
+                    <Setter Property="VerticalContentAlignment" Value="Top"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition x:Name="ScriptEditorTopRow" Height="*" MinHeight="220" />
@@ -106,6 +116,7 @@
                                  HorizontalScrollBarVisibility="Auto"
                                  FontFamily="Consolas"
                                  FontSize="13"
+                                 VerticalContentAlignment="Top"
                                  TextChanged="ScriptTextBox_TextChanged"
                                  SelectionChanged="ScriptTextBox_SelectionChanged"
                                  ScrollViewer.ScrollChanged="ScriptTextBox_ScrollChanged" />
@@ -160,7 +171,8 @@
                          HorizontalScrollBarVisibility="Auto"
                          TextWrapping="NoWrap"
                          FontFamily="Consolas"
-                         FontSize="12" />
+                         FontSize="12"
+                         VerticalContentAlignment="Top" />
             </Grid>
         </Expander>
     </Grid>
