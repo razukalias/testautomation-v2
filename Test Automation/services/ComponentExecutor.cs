@@ -196,6 +196,15 @@ namespace Test_Automation.Services
                 return await ExecuteThreads(threads, context);
             }
 
+            // Check if TestPlan has ThreadCount > 1 for multi-threaded execution
+            if (component is TestPlan testPlan && 
+                testPlan.Settings.TryGetValue("ThreadCount", out var tpThreadCountStr) &&
+                int.TryParse(tpThreadCountStr, out var tpThreadCount) &&
+                tpThreadCount > 1)
+            {
+                return await ExecuteTestPlanWithThreads(testPlan, context, tpThreadCount);
+            }
+
             if (component is Loop loop)
             {
                 return await ExecuteLoop(loop, context);
@@ -480,6 +489,79 @@ namespace Test_Automation.Services
             var text = value.ToString() ?? string.Empty;
             if (text.Length <= maxLength) return text;
             return text.Substring(0, maxLength) + "...[truncated]";
+        }
+
+        /// <summary>
+        /// Executes a TestPlan's children in multiple threads when ThreadCount > 1.
+        /// Each thread runs all children sequentially with isolated variable scoping.
+        /// </summary>
+        private async Task<ExecutionResult> ExecuteTestPlanWithThreads(TestPlan testPlan, ExecutionContext context, int threadCount)
+        {
+            var result = await ExecuteComponent(testPlan, context);
+
+            var testPlanData = result.Data as TestPlanData;
+            if (testPlanData != null)
+            {
+                testPlanData.Status = "running";
+            }
+
+            TraceLog(testPlan, result, $"[ComponentExecutor] Starting TestPlan with {threadCount} threads with ISOLATED variable scoping", TraceLevel.Info);
+
+            // Create a list to track thread-local contexts for optional post-merge
+            var threadContexts = new List<(int ThreadIndex, ExecutionContext Context)>();
+
+            var taskList = Enumerable.Range(1, threadCount)
+                .Select(index => Task.Run(async () =>
+                {
+                    CurrentThreadIndex.Value = index;
+                    CurrentThreadGroupId.Value = testPlan.Id;
+
+                    // Create a thread-local context with isolated variables
+                    var threadContext = context.CreateThreadLocalContext(index);
+                    threadContexts.Add((index, threadContext));
+
+                    TraceLog(testPlan, result, $"[TESTPLAN-THREAD-{index}] Started with isolated variable scope", TraceLevel.Verbose);
+
+                    foreach (var child in testPlan.Children)
+                    {
+                        ThrowIfStopped(context, child.Name);
+                        var childResult = await ExecuteComponentTree(child, threadContext);
+                        lock (context.Results)
+                        {
+                            context.Results.Add(childResult);
+                        }
+                    }
+
+                    // Log what variables this thread set
+                    var localVars = threadContext.GetLocalVariablesOnly();
+                    if (localVars.Count > 0)
+                    {
+                        TraceLog(testPlan, result, $"[TESTPLAN-THREAD-{index}] Set {localVars.Count} thread-local variables: [{string.Join(", ", localVars.Keys.Take(10))}]", TraceLevel.Verbose);
+                    }
+
+                    TraceLog(testPlan, result, $"[TESTPLAN-THREAD-{index}] Completed", TraceLevel.Verbose);
+                }, context.StopToken))
+                .ToList();
+
+            await Task.WhenAll(taskList);
+
+            TraceLog(testPlan, result, $"[ComponentExecutor] All {threadCount} TestPlan threads completed", TraceLevel.Info);
+
+            // Log thread-local variable summary
+            foreach (var (threadIndex, threadContext) in threadContexts)
+            {
+                var localVars = threadContext.GetLocalVariablesOnly();
+                TraceLog(testPlan, result, $"[TESTPLAN-THREAD-{threadIndex}] Final local variables ({localVars.Count}): [{string.Join(", ", localVars.Select(kv => $"{kv.Key}={TruncateForLogging(kv.Value, 30)}").Take(5))}]", TraceLevel.Verbose);
+            }
+
+            // Update test plan status
+            if (testPlanData != null)
+            {
+                testPlanData.Status = "completed";
+                testPlanData.EndTime = DateTime.UtcNow;
+            }
+
+            return result;
         }
 
         private static IEnumerable<object> ResolveCollection(ExecutionContext context, string? sourceVariable)

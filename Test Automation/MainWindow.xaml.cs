@@ -619,6 +619,19 @@ namespace Test_Automation
             }
         }
 
+        public string TestPlanThreadCount
+        {
+            get => SelectedNode?.Type == "TestPlan" ? GetSettingValue("ThreadCount", "1") : "1";
+            set
+            {
+                if (SelectedNode != null && SelectedNode.Type == "TestPlan")
+                {
+                    SetSettingValue("ThreadCount", value ?? "1");
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public IEnumerable<NodeSetting> ProjectVariablesForEditor =>
             SelectedNode?.Type == "Project"
                 ? SelectedNode.Variables.Where(variable => !string.Equals(variable.Key, "env", StringComparison.OrdinalIgnoreCase))
@@ -3361,7 +3374,8 @@ namespace Test_Automation
 
             if (parentType == "TestPlan")
             {
-                return new[] { "Threads" };
+                // TestPlan can have Threads and all step types directly
+                return new[] { "Threads", "Config", "If", "Loop", "Foreach" }.Concat(StepTypes).ToArray();
             }
 
             if (parentType == "Threads" || parentType == "If" || parentType == "Loop" || parentType == "Foreach")
@@ -7717,6 +7731,7 @@ namespace Test_Automation
             OnPropertyChanged(nameof(IsScriptSelected));
             OnPropertyChanged(nameof(IsTestPlanSelected));
             OnPropertyChanged(nameof(SelectedExecutionType));
+            OnPropertyChanged(nameof(TestPlanThreadCount));
             OnPropertyChanged(nameof(AvailableVariablesForExtractor));
             OnPropertyChanged(nameof(ProjectVariablesForEditor));
             OnPropertyChanged(nameof(TestPlanVariablesForEditor));

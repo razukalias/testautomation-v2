@@ -1351,6 +1351,15 @@
                                           ItemsSource="{Binding ExecutionTypeOptions}"
                                           SelectedItem="{Binding SelectedExecutionType, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Thread Count" />
+                                <TextBox Grid.Column="1" Text="{Binding TestPlanThreadCount, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                            <TextBlock Text="Set Thread Count > 1 to run children in parallel" Foreground="{DynamicResource TextMutedBrush}" FontStyle="Italic" Margin="0,0,0,6" />
                             <TextBlock Text="PreExecute runs first, PostExecute runs last" Foreground="{DynamicResource TextMutedBrush}" FontStyle="Italic" Margin="0,0,0,6" />
                             
                             <!-- View Assertions Button for TestPlan -->
