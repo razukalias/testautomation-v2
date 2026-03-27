@@ -10,5 +10,6 @@ namespace Test_Automation.Services
         List<Models.Editor.AssertionRule> ResolveAssertions(List<Models.Editor.AssertionRule> assertions, ExecutionContext context, System.Action<string, TraceLevel>? trace = null);
         List<AssertionEvaluationResult> EvaluateAssertions(Componentes.Component component, ComponentData? componentData, ExecutionContext context, System.Action<string, TraceLevel> trace, ExecutionResult result);
         Task<List<AssertionEvaluationResult>> EvaluateAssertionsAsync(Componentes.Component component, ComponentData? componentData, ExecutionContext context, System.Action<string, TraceLevel> trace, ExecutionResult result);
+        Task<List<AssertionEvaluationResult>> EvaluateAssertionsAsync(Componentes.Component component, ComponentData? componentData, ExecutionContext context, System.Action<string, TraceLevel> trace, ExecutionResult result, List<Models.Editor.AssertionRule>? resolvedAssertions);
     }
 }

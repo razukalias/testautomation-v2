@@ -117,22 +117,32 @@ namespace Test_Automation.Services
 
         public async Task<List<AssertionEvaluationResult>> EvaluateAssertionsAsync(Component component, ComponentData? componentData, ExecutionContext context, Action<string, TraceLevel> trace, ExecutionResult result)
         {
+            // Use component's assertions (original behavior, but can have race conditions in multi-threaded scenarios)
+            return await EvaluateAssertionsAsync(component, componentData, context, trace, result, component?.Assertions);
+        }
+
+        /// <summary>
+        /// Evaluates assertions using the provided resolved assertions list.
+        /// This overload prevents race conditions in multi-threaded scenarios by avoiding shared state.
+        /// </summary>
+        public async Task<List<AssertionEvaluationResult>> EvaluateAssertionsAsync(Component component, ComponentData? componentData, ExecutionContext context, Action<string, TraceLevel> trace, ExecutionResult result, List<AssertionRule>? resolvedAssertions)
+        {
             TraceFunction(trace, $"component={component?.Name}, hasData={componentData != null}");
             var results = new List<AssertionEvaluationResult>();
-            if (component == null || component.Assertions == null || componentData == null)
+            if (component == null || resolvedAssertions == null || componentData == null)
             {
                 TraceFunction(trace, output: "Skipped (missing component, assertions or data)");
                 return results;
             }
 
-            trace($"Evaluating {component.Assertions?.Count ?? 0} assertions for {component.Name}.", TraceLevel.Info);
-            
+            trace($"Evaluating {resolvedAssertions.Count} assertions for {component.Name}.", TraceLevel.Info);
+
             // Log variable snapshot before assertion evaluation
             LogVariableSnapshot(context, "Before assertions", trace, component.Id, context.ExecutionId);
 
-            for (var index = 0; index < (component.Assertions?.Count ?? 0); index++)
+            for (var index = 0; index < resolvedAssertions.Count; index++)
             {
-                var assertion = component.Assertions![index];
+                var assertion = resolvedAssertions[index];
                 
                 // Handle Variable source - get value from context
                 object? sourceValue;

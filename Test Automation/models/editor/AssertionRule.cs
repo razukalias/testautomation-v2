@@ -144,6 +144,24 @@ namespace Test_Automation.Models.Editor
             _lastMessage = string.Empty;
         }
 
+        /// <summary>
+        /// Creates a deep copy of this AssertionRule for thread-safe execution.
+        /// Each thread gets its own copy to avoid race conditions when resolving variables.
+        /// </summary>
+        public AssertionRule Clone()
+        {
+            return new AssertionRule
+            {
+                _source = this._source,
+                _jsonPath = this._jsonPath,
+                _mode = this._mode,
+                _condition = this._condition,
+                _expected = this._expected,
+                _lastResultState = this._lastResultState,
+                _lastMessage = this._lastMessage
+            };
+        }
+
         private static string NormalizeMode(string? mode)
         {
             if (string.IsNullOrWhiteSpace(mode))

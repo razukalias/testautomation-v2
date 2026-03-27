@@ -75,14 +75,18 @@ namespace Test_Automation.Services
             var originalSettings = component.Settings;
             var originalExtractors = component.Extractors;
             var originalAssertions = component.Assertions;
-            
+
             try
             {
                 TraceLog(component, result, $"[ComponentExecutor] Resolving settings, extractors, and assertions...", TraceLevel.Verbose);
                 var settingsToResolve = originalSettings ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 component.Settings = _variableService.ResolveSettings(settingsToResolve, context);
                 component.Extractors = _variableService.ResolveExtractors(originalExtractors ?? new List<VariableExtractionRule>(), context);
-                component.Assertions = _assertionService.ResolveAssertions(originalAssertions ?? new List<AssertionRule>(), context);
+
+                // Resolve assertions locally WITHOUT modifying shared component.Assertions (thread-safe)
+                var resolvedAssertions = _assertionService.ResolveAssertions(
+                    (originalAssertions ?? new List<AssertionRule>()).Select(a => a.Clone()).ToList(),
+                    context);
 
                 TraceLog(component, result, $"[ComponentExecutor] Executing component implementation: {component.GetType().Name}", TraceLevel.Verbose);
                 var componentData = await component.Execute(context);
@@ -118,7 +122,8 @@ namespace Test_Automation.Services
                 TraceLog(component, result, "[ComponentExecutor] Rebuilding after variable extraction...", TraceLevel.Verbose);
                 _previewBuilder.BuildAndAttachPreviewData(component, result, context);
 
-                var assertionResults = await _assertionService.EvaluateAssertionsAsync(component, componentData, context, (msg, level) => TraceLog(component, result, msg, level), result);
+                // Pass resolved assertions directly (thread-safe - doesn't use shared component.Assertions)
+                var assertionResults = await _assertionService.EvaluateAssertionsAsync(component, componentData, context, (msg, level) => TraceLog(component, result, msg, level), result, resolvedAssertions);
                 result.AssertionResults = assertionResults;
                 result.AssertFailedCount = assertionResults.Count(item => !item.Passed && IsAssertMode(item.Mode));
                 result.ExpectFailedCount = assertionResults.Count(item => !item.Passed && !IsAssertMode(item.Mode));
