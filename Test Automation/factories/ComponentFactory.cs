@@ -26,6 +26,8 @@ namespace Test_Automation.Factories
                 "assert" => new Assert(),
                 "variableextractor" => new VariableExtractor(),
                 "script" => new Script(),
+                "randomgenerator" => new RandomGenerator(),
+                "random" => new RandomGenerator(),
                 _ => throw new ArgumentException($"Unknown component type: {componentType}")
             };
         }

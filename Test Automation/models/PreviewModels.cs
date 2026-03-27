@@ -434,6 +434,20 @@ namespace Test_Automation.Models
     }
 
     /// <summary>
+    /// Random Generator component preview data
+    /// </summary>
+    public class RandomGeneratorPreviewData : ComponentPreviewData
+    {
+        public override string PreviewType => "RandomGenerator";
+
+        [JsonPropertyName("generatedValue")]
+        public string GeneratedValue { get; set; } = string.Empty;
+
+        [JsonPropertyName("outputType")]
+        public string OutputType { get; set; } = string.Empty;
+    }
+
+    /// <summary>
     /// Container for all preview data - used for JSON serialization
     /// </summary>
     public class PreviewContainer

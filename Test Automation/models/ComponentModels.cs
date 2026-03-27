@@ -276,4 +276,22 @@ public class VariableExtractorData : ComponentData
         [JsonPropertyName("childComponents")]
         public List<string> ChildComponents { get; set; } = new List<string>();
     }
+
+    /// <summary>
+    /// Random Generator component model
+    /// </summary>
+    public class RandomGeneratorData : ComponentData
+    {
+        [JsonPropertyName("generatedValue")]
+        public string GeneratedValue { get; set; } = string.Empty;
+
+        [JsonPropertyName("generatedNumber")]
+        public double GeneratedNumber { get; set; }
+
+        [JsonPropertyName("generatedId")]
+        public string GeneratedId { get; set; } = string.Empty;
+
+        [JsonPropertyName("outputType")]
+        public string OutputType { get; set; } = string.Empty;
+    }
 }

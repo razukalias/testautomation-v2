@@ -604,6 +604,7 @@ namespace Test_Automation
         public bool IsAssertSelected => SelectedNode?.Type == "Assert";
         public bool IsVariableExtractorSelected => SelectedNode?.Type == "VariableExtractor";
         public bool IsScriptSelected => SelectedNode?.Type == "Script";
+        public bool IsRandomGeneratorSelected => SelectedNode?.Type == "RandomGenerator";
         public bool IsTestPlanSelected => SelectedNode?.Type == "TestPlan";
 
         public ExecutionType SelectedExecutionType
@@ -1524,6 +1525,560 @@ namespace Test_Automation
             set => SetSettingValue("Code", value);
         }
 
+        #region RandomGenerator Properties
+
+        private static readonly string[] _randomOutputTypeOptions = new[]
+        {
+            "integer", "number", "float", "decimal", "long",
+            "guid", "guid-n", "uuid",
+            "string", "utf8", "ascii", "hex", "base64", "alphanumeric", "alpha", "numeric", "lorem",
+            "firstname", "lastname", "fullname", "email", "username",
+            "datetime", "date", "time", "timestamp",
+            "ip", "ipv6", "mac", "url", "hostname", "phone",
+            "bool", "color", "zipcode",
+            "json", "array",
+            "uppercase", "lowercase", "camelcase", "pascalcase", "snakecase", "kebabcase"
+        };
+
+        private static readonly string[] _randomItemTypeOptions = new[]
+        {
+            "string", "integer", "double", "float", "decimal", "guid", "boolean", "date", "email", "name", "json"
+        };
+
+        public string[] RandomOutputTypeOptions => _randomOutputTypeOptions;
+        public string[] RandomItemTypeOptions => _randomItemTypeOptions;
+
+        public string RandomOutputType
+        {
+            get => GetSettingValue("OutputType", "number");
+            set
+            {
+                SetSettingValue("OutputType", value);
+                OnPropertyChanged(nameof(RandomShowStringOptions));
+                OnPropertyChanged(nameof(RandomShowArrayOptions));
+                OnPropertyChanged(nameof(RandomShowJsonOptions));
+                OnPropertyChanged(nameof(RandomShowEmailOption));
+            }
+        }
+
+        public string RandomMin
+        {
+            get => GetSettingValue("Min", "0");
+            set => SetSettingValue("Min", value);
+        }
+
+        public string RandomMax
+        {
+            get => GetSettingValue("Max", "100");
+            set => SetSettingValue("Max", value);
+        }
+
+        public string RandomLength
+        {
+            get => GetSettingValue("Length", "10");
+            set => SetSettingValue("Length", value);
+        }
+
+        public string RandomDecimalPlaces
+        {
+            get => GetSettingValue("DecimalPlaces", "2");
+            set => SetSettingValue("DecimalPlaces", value);
+        }
+
+        public string RandomArrayLength
+        {
+            get => GetSettingValue("ArrayLength", "5");
+            set => SetSettingValue("ArrayLength", value);
+        }
+
+        public string RandomItemType
+        {
+            get => GetSettingValue("ItemType", "string");
+            set => SetSettingValue("ItemType", value);
+        }
+
+        public string RandomEmailDomain
+        {
+            get => GetSettingValue("EmailDomain", "");
+            set => SetSettingValue("EmailDomain", value);
+        }
+
+        public string RandomVariableName
+        {
+            get => GetSettingValue("VariableName", "");
+            set => SetSettingValue("VariableName", value);
+        }
+
+        public string RandomJsonStructure
+        {
+            get => GetSettingValue("JsonStructure", "");
+            set => SetSettingValue("JsonStructure", value);
+        }
+
+        public bool RandomIncludeUpper
+        {
+            get => GetSettingBoolValue("IncludeUpper", true);
+            set => SetSettingValue("IncludeUpper", value.ToString());
+        }
+
+        public bool RandomIncludeLower
+        {
+            get => GetSettingBoolValue("IncludeLower", true);
+            set => SetSettingValue("IncludeLower", value.ToString());
+        }
+
+        public bool RandomIncludeNumbers
+        {
+            get => GetSettingBoolValue("IncludeNumbers", true);
+            set => SetSettingValue("IncludeNumbers", value.ToString());
+        }
+
+        public bool RandomIncludeSpecial
+        {
+            get => GetSettingBoolValue("IncludeSpecial", false);
+            set => SetSettingValue("IncludeSpecial", value.ToString());
+        }
+
+        public bool RandomShowStringOptions
+        {
+            get
+            {
+                var type = RandomOutputType?.ToLower() ?? "";
+                return type == "string" || type == "text" || type == "alphanumeric" || type == "alpha";
+            }
+        }
+
+        public bool RandomShowArrayOptions
+        {
+            get
+            {
+                var type = RandomOutputType?.ToLower() ?? "";
+                return type == "array" || type == "list";
+            }
+        }
+
+        public bool RandomShowJsonOptions
+        {
+            get
+            {
+                var type = RandomOutputType?.ToLower() ?? "";
+                return type == "json" || type == "jsonobject" || type == "object";
+            }
+        }
+
+        public bool RandomShowEmailOption
+        {
+            get
+            {
+                var type = RandomOutputType?.ToLower() ?? "";
+                return type == "email";
+            }
+        }
+
+        private bool GetSettingBoolValue(string key, bool defaultValue)
+        {
+            var value = GetSettingValue(key, null);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return bool.TryParse(value, out var result) && result;
+            }
+            return defaultValue;
+        }
+
+        #endregion
+
+        #region Json Structure Builder
+
+        private ObservableCollection<JsonStructureNode> _jsonStructureNodes = new();
+
+        public ObservableCollection<JsonStructureNode> JsonStructureNodes
+        {
+            get
+            {
+                if (!_jsonStructureLoaded)
+                {
+                    LoadJsonStructureFromSettings();
+                    _jsonStructureLoaded = true;
+                }
+                return _jsonStructureNodes;
+            }
+        }
+
+        private bool _jsonStructureLoaded;
+
+        private void LoadJsonStructureFromSettings()
+        {
+            if (_jsonStructureLoaded) return;
+            _jsonStructureLoaded = true;
+
+            var jsonText = RandomJsonStructure;
+            if (string.IsNullOrWhiteSpace(jsonText))
+            {
+                // Add a default node
+                _jsonStructureNodes.Add(new JsonStructureNode("id", "guid", 0));
+                _jsonStructureNodes.Add(new JsonStructureNode("name", "fullname", 0));
+                _jsonStructureNodes.Add(new JsonStructureNode("email", "email", 0));
+                return;
+            }
+
+            try
+            {
+                using var doc = JsonDocument.Parse(jsonText);
+                ParseJsonElement(doc.RootElement, _jsonStructureNodes, 0);
+            }
+            catch
+            {
+                _jsonStructureNodes.Add(new JsonStructureNode("id", "guid", 0));
+                _jsonStructureNodes.Add(new JsonStructureNode("name", "fullname", 0));
+            }
+        }
+
+        private void ParseJsonElement(JsonElement element, ObservableCollection<JsonStructureNode> collection, int nestingLevel)
+        {
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var prop in element.EnumerateObject())
+                {
+                    var node = new JsonStructureNode { Key = prop.Name, NestingLevel = nestingLevel };
+                    
+                    switch (prop.Value.ValueKind)
+                    {
+                        case JsonValueKind.Object:
+                            node.ValueType = "object";
+                            ParseJsonElement(prop.Value, node.Children, nestingLevel + 1);
+                            break;
+                        
+                        case JsonValueKind.Array:
+                            node.ValueType = "array";
+                            node.ArrayLength = prop.Value.GetArrayLength();
+                            if (prop.Value.EnumerateArray().FirstOrDefault().ValueKind == JsonValueKind.Object)
+                            {
+                                node.ItemType = "object";
+                                if (prop.Value.GetArrayLength() > 0)
+                                {
+                                    ParseJsonElement(prop.Value[0], node.ArrayItemChildren, nestingLevel + 1);
+                                }
+                            }
+                            else
+                            {
+                                node.ItemType = "string";
+                            }
+                            break;
+                        
+                        case JsonValueKind.String:
+                            var strVal = prop.Value.GetString() ?? "";
+                            node.ValueType = strVal.StartsWith("__type:") ? strVal.Substring(7) : "string";
+                            break;
+                        
+                        case JsonValueKind.Number:
+                            node.ValueType = "integer";
+                            break;
+                        
+                        case JsonValueKind.True:
+                        case JsonValueKind.False:
+                            node.ValueType = "boolean";
+                            break;
+                        
+                        default:
+                            node.ValueType = "string";
+                            break;
+                    }
+                    
+                    collection.Add(node);
+                }
+            }
+        }
+
+        public void AddJsonKey(JsonStructureNode? parent = null, bool isArrayItem = false)
+        {
+            var target = parent != null ? (isArrayItem ? parent.ArrayItemChildren : parent.Children) : _jsonStructureNodes;
+            var nestingLevel = parent?.NestingLevel ?? 0;
+            if (isArrayItem) nestingLevel++;
+            target.Add(new JsonStructureNode($"key{target.Count + 1}", "string", nestingLevel, isArrayItem));
+            SaveJsonStructureToSettings();
+        }
+
+        public void AddJsonNestedObject(JsonStructureNode parent, bool isArrayItem = false)
+        {
+            var target = isArrayItem ? parent.ArrayItemChildren : parent.Children;
+            var nestingLevel = parent.NestingLevel + 1;
+            var newNode = new JsonStructureNode($"nested{target.Count + 1}", "object", nestingLevel, isArrayItem);
+            newNode.Children.Add(new JsonStructureNode("subKey", "string", nestingLevel + 1));
+            target.Add(newNode);
+            parent.IsExpanded = true;
+            SaveJsonStructureToSettings();
+        }
+
+        public void AddJsonArray(JsonStructureNode parent, bool isArrayItem = false)
+        {
+            var target = isArrayItem ? parent.ArrayItemChildren : parent.Children;
+            var nestingLevel = parent.NestingLevel + 1;
+            var newNode = new JsonStructureNode($"array{target.Count + 1}", "array", nestingLevel, isArrayItem);
+            newNode.ItemType = "string";
+            newNode.ArrayLength = 3;
+            target.Add(newNode);
+            parent.IsExpanded = true;
+            SaveJsonStructureToSettings();
+        }
+
+        public void RemoveJsonNode(JsonStructureNode node)
+        {
+            // Find and remove from the appropriate collection
+            foreach (var root in _jsonStructureNodes)
+            {
+                if (RemoveNodeFromCollection(root, node))
+                {
+                    SaveJsonStructureToSettings();
+                    return;
+                }
+            }
+            _jsonStructureNodes.Remove(node);
+            SaveJsonStructureToSettings();
+        }
+
+        private bool RemoveNodeFromCollection(JsonStructureNode parent, JsonStructureNode target)
+        {
+            if (parent.Children.Remove(target)) return true;
+            if (parent.ArrayItemChildren.Remove(target)) return true;
+            
+            foreach (var child in parent.Children)
+            {
+                if (RemoveNodeFromCollection(child, target)) return true;
+            }
+            foreach (var child in parent.ArrayItemChildren)
+            {
+                if (RemoveNodeFromCollection(child, target)) return true;
+            }
+            
+            return false;
+        }
+
+        public void SaveJsonStructureToSettings()
+        {
+            try
+            {
+                var dict = new Dictionary<string, object>();
+                foreach (var node in _jsonStructureNodes)
+                {
+                    dict[node.Key] = BuildTemplateValue(node);
+                }
+                var json = JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
+                RandomJsonStructure = json;
+                OnPropertyChanged(nameof(RandomJsonStructure));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SaveJsonStructureToSettings error: {ex.Message}");
+            }
+        }
+
+        private object BuildTemplateValue(JsonStructureNode node)
+        {
+            switch (node.ValueType)
+            {
+                case "object":
+                    var objDict = new Dictionary<string, object>();
+                    foreach (var child in node.Children)
+                    {
+                        objDict[child.Key] = BuildTemplateValue(child);
+                    }
+                    return objDict;
+
+                case "array":
+                    var arrayDict = new Dictionary<string, object>
+                    {
+                        ["__isArray"] = true,
+                        ["__length"] = node.ArrayLength,
+                        ["__itemType"] = node.ItemType
+                    };
+
+                    if (node.ItemType == "object")
+                    {
+                        var itemsDict = new Dictionary<string, object>();
+                        if (node.ArrayItemChildren.Count > 0)
+                        {
+                            foreach (var child in node.ArrayItemChildren)
+                            {
+                                itemsDict[child.Key] = BuildTemplateValue(child);
+                            }
+                        }
+                        else
+                        {
+                            // Add default keys for object array items
+                            itemsDict["id"] = "__type:guid";
+                            itemsDict["value"] = "__type:string";
+                        }
+                        arrayDict["__items"] = itemsDict;
+                    }
+                    else
+                    {
+                        arrayDict["__items"] = node.ItemType;
+                    }
+                    return arrayDict;
+
+                default:
+                    return $"__type:{node.ValueType}";
+            }
+        }
+
+        #endregion
+
+        #region JSON Structure Builder Event Handlers
+
+        private void AddJsonKey_Click(object sender, RoutedEventArgs e)
+        {
+            AddJsonKey();
+            OnPropertyChanged(nameof(JsonStructureNodes));
+            OnPropertyChanged(nameof(RandomJsonStructure));
+        }
+
+        private void AddJsonObject_Click(object sender, RoutedEventArgs e)
+        {
+            var newNode = new JsonStructureNode($"object{_jsonStructureNodes.Count + 1}", "object", 0);
+            newNode.Children.Add(new JsonStructureNode("key1", "string", 1));
+            _jsonStructureNodes.Add(newNode);
+            SaveJsonStructureToSettings();
+            OnPropertyChanged(nameof(JsonStructureNodes));
+        }
+
+        private void AddJsonArray_Click(object sender, RoutedEventArgs e)
+        {
+            var newNode = new JsonStructureNode($"array{_jsonStructureNodes.Count + 1}", "array", 0);
+            newNode.ItemType = "string";
+            newNode.ArrayLength = 3;
+            _jsonStructureNodes.Add(newNode);
+            SaveJsonStructureToSettings();
+            OnPropertyChanged(nameof(JsonStructureNodes));
+        }
+
+        private void AddArrayItemKey_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is JsonStructureNode parent)
+            {
+                parent.ArrayItemChildren.Add(new JsonStructureNode($"itemKey{parent.ArrayItemChildren.Count + 1}", "string", parent.NestingLevel + 1, true));
+                parent.IsExpanded = true;
+                SaveJsonStructureToSettings();
+                OnPropertyChanged(nameof(JsonStructureNodes));
+                OnPropertyChanged(nameof(RandomJsonStructure));
+            }
+        }
+
+        private void ClearJsonStructure_Click(object sender, RoutedEventArgs e)
+        {
+            _jsonStructureNodes.Clear();
+            SaveJsonStructureToSettings();
+            OnPropertyChanged(nameof(JsonStructureNodes));
+            OnPropertyChanged(nameof(RandomJsonStructure));
+        }
+
+        private void RefreshJsonStructure()
+        {
+            _jsonStructureLoaded = false;
+            _jsonStructureNodes.Clear();
+            OnPropertyChanged(nameof(JsonStructureNodes));
+        }
+
+        private void ToggleExpand_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is JsonStructureNode node)
+            {
+                node.IsExpanded = !node.IsExpanded;
+            }
+        }
+
+        private void AddChildKey_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is JsonStructureNode parent)
+            {
+                parent.Children.Add(new JsonStructureNode($"key{parent.Children.Count + 1}", "string", parent.NestingLevel + 1));
+                parent.IsExpanded = true;
+                SaveJsonStructureToSettings();
+                OnPropertyChanged(nameof(JsonStructureNodes));
+                OnPropertyChanged(nameof(RandomJsonStructure));
+            }
+        }
+
+        private void AddNestedObject_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is JsonStructureNode parent)
+            {
+                var newObj = new JsonStructureNode($"object{parent.Children.Count + 1}", "object", parent.NestingLevel + 1);
+                newObj.Children.Add(new JsonStructureNode("subKey", "string", parent.NestingLevel + 2));
+                parent.Children.Add(newObj);
+                parent.IsExpanded = true;
+                SaveJsonStructureToSettings();
+                OnPropertyChanged(nameof(JsonStructureNodes));
+                OnPropertyChanged(nameof(RandomJsonStructure));
+            }
+        }
+
+        private void AddNestedArray_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is JsonStructureNode parent)
+            {
+                var newArray = new JsonStructureNode($"array{parent.Children.Count + 1}", "array", parent.NestingLevel + 1);
+                newArray.ItemType = "string";
+                newArray.ArrayLength = 3;
+                parent.Children.Add(newArray);
+                parent.IsExpanded = true;
+                SaveJsonStructureToSettings();
+                OnPropertyChanged(nameof(JsonStructureNodes));
+                OnPropertyChanged(nameof(RandomJsonStructure));
+            }
+        }
+
+        private void AddArrayItemChild_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is JsonStructureNode parent)
+            {
+                parent.ArrayItemChildren.Add(new JsonStructureNode($"itemKey{parent.ArrayItemChildren.Count + 1}", "string", parent.NestingLevel + 1, true));
+                SaveJsonStructureToSettings();
+                OnPropertyChanged(nameof(JsonStructureNodes));
+            }
+        }
+
+        private void RemoveJsonNode_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is JsonStructureNode node)
+            {
+                RemoveJsonNode(node);
+                OnPropertyChanged(nameof(JsonStructureNodes));
+                OnPropertyChanged(nameof(RandomJsonStructure));
+            }
+        }
+
+        private void RemoveArrayItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is JsonStructureNode node)
+            {
+                // Find parent and remove
+                foreach (var root in _jsonStructureNodes)
+                {
+                    if (RemoveArrayItemFromParent(root, node))
+                    {
+                        SaveJsonStructureToSettings();
+                        OnPropertyChanged(nameof(JsonStructureNodes));
+                        OnPropertyChanged(nameof(RandomJsonStructure));
+                        return;
+                    }
+                }
+            }
+        }
+
+        private bool RemoveArrayItemFromParent(JsonStructureNode parent, JsonStructureNode target)
+        {
+            if (parent.ArrayItemChildren.Remove(target)) return true;
+            
+            foreach (var child in parent.Children)
+            {
+                if (RemoveArrayItemFromParent(child, target)) return true;
+            }
+            
+            return false;
+        }
+
+        #endregion
+
         private Point _dragStartPoint;
         private PlanNode? _draggedNode;
         private bool _isSyncingAssertionTreeSource;
@@ -1539,7 +2094,7 @@ namespace Test_Automation
 
         private static readonly string[] StepTypes =
         {
-            "Http", "GraphQl", "Sql", "Dataset", "Assert", "VariableExtractor", "Script", "Timer"
+            "Http", "GraphQl", "Sql", "Dataset", "Assert", "VariableExtractor", "Script", "Timer", "RandomGenerator"
         };
 
         public MainWindow()
@@ -5281,6 +5836,46 @@ namespace Test_Automation
                 return;
             }
 
+            if (nodeType == "RandomGenerator")
+            {
+                var outputType = GetSettingValue("OutputType", "number");
+                var latestRandomExecution = nodeExecutionResults
+                    .OrderByDescending(result => result.EndTime ?? result.StartTime)
+                    .FirstOrDefault();
+                var lastRandomData = GetLastExecutionData<RandomGeneratorData>(nodeId);
+                PreviewOutput = lastRandomData?.GeneratedValue ?? string.Empty;
+
+                var randomRuns = nodeExecutionResults
+                    .Select(result => new
+                    {
+                        threadIndex = result.ThreadIndex,
+                        startTime = result.StartTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                        endTime = result.EndTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                        durationMs = result.DurationMs,
+                        status = result.Status,
+                        generatedValue = (result.Data as RandomGeneratorData)?.GeneratedValue,
+                        outputType = (result.Data as RandomGeneratorData)?.OutputType
+                    })
+                    .ToList();
+
+                PreviewRequest = JsonSerializer.Serialize(new
+                {
+                    type = "RandomGenerator",
+                    outputType,
+                    generatedValue = lastRandomData?.GeneratedValue
+                }, PrettyJsonOptions);
+
+                PreviewResponse = JsonSerializer.Serialize(new
+                {
+                    runs = randomRuns
+                }, PrettyJsonOptions);
+
+                PreviewLogs = $"[{now}] RandomGenerator preview refreshed\n[{now}] OutputType: {outputType}\n[{now}] Generated: {lastRandomData?.GeneratedValue}";
+                AppendExtractionPreview(now);
+                RebuildPreviewLogsForSelectedNode();
+                return;
+            }
+
             var settings = SelectedNode.Settings
                 .Where(setting => !string.IsNullOrWhiteSpace(setting.Key))
                 .ToDictionary(setting => setting.Key, setting => setting.Value);
@@ -7816,6 +8411,25 @@ namespace Test_Automation
             OnPropertyChanged(nameof(ExtractorVariableName));
             OnPropertyChanged(nameof(ScriptLanguage));
             OnPropertyChanged(nameof(ScriptCode));
+            OnPropertyChanged(nameof(IsRandomGeneratorSelected));
+            OnPropertyChanged(nameof(RandomOutputType));
+            OnPropertyChanged(nameof(RandomMin));
+            OnPropertyChanged(nameof(RandomMax));
+            OnPropertyChanged(nameof(RandomLength));
+            OnPropertyChanged(nameof(RandomDecimalPlaces));
+            OnPropertyChanged(nameof(RandomArrayLength));
+            OnPropertyChanged(nameof(RandomItemType));
+            OnPropertyChanged(nameof(RandomEmailDomain));
+            OnPropertyChanged(nameof(RandomVariableName));
+            OnPropertyChanged(nameof(RandomJsonStructure));
+            OnPropertyChanged(nameof(RandomIncludeUpper));
+            OnPropertyChanged(nameof(RandomIncludeLower));
+            OnPropertyChanged(nameof(RandomIncludeNumbers));
+            OnPropertyChanged(nameof(RandomIncludeSpecial));
+            OnPropertyChanged(nameof(RandomShowStringOptions));
+            OnPropertyChanged(nameof(RandomShowArrayOptions));
+            OnPropertyChanged(nameof(RandomShowJsonOptions));
+            OnPropertyChanged(nameof(RandomShowEmailOption));
         }
 
         private void RaiseHttpAuthVisibilityChanged()

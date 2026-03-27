@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Test_Automation"
+        xmlns:editor="clr-namespace:Test_Automation.Models.Editor"
         xmlns:conv="clr-namespace:Test_Automation.Converters"
         mc:Ignorable="d"
         Title="Test Automation" Height="650" Width="1100">
@@ -13,6 +14,9 @@
         <conv:VariableUsageTooltipConverter x:Key="VariableUsageTooltipConverter" />
         <conv:VariableSettingUsageLabelConverter x:Key="VariableSettingUsageLabelConverter" />
         <conv:VariableSettingUsageTooltipConverter x:Key="VariableSettingUsageTooltipConverter" />
+        <conv:BoolToExpandConverter x:Key="BoolToExpandConverter" />
+        <conv:HasChildrenConverter x:Key="HasChildrenConverter" />
+        <conv:NestingToWidthConverter x:Key="NestingToWidthConverter" />
     </Window.Resources>
     <Grid Background="{DynamicResource WindowBackgroundBrush}">
         <Grid.ColumnDefinitions>
@@ -1333,6 +1337,256 @@
                                          Cursor="Hand"
                                          ToolTip="Click to open script editor"
                                          PreviewMouseLeftButtonDown="ScriptCodeTextBox_PreviewMouseLeftButtonDown" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                            Visibility="{Binding IsRandomGeneratorSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="Random Generator" FontWeight="SemiBold" Margin="0,0,0,6" />
+                            
+                            <!-- Output Type -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output Type" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding RandomOutputTypeOptions}"
+                                          SelectedItem="{Binding RandomOutputType, UpdateSourceTrigger=PropertyChanged}"
+                                          ToolTip="Type of random value to generate" />
+                            </Grid>
+                            
+                            <!-- Min -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Min" />
+                                <TextBox Grid.Column="1" Text="{Binding RandomMin, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Minimum value for number generation" />
+                            </Grid>
+                            
+                            <!-- Max -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Max" />
+                                <TextBox Grid.Column="1" Text="{Binding RandomMax, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Maximum value for number generation" />
+                            </Grid>
+                            
+                            <!-- Length -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Length" />
+                                <TextBox Grid.Column="1" Text="{Binding RandomLength, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Length for string/UUID generation" />
+                            </Grid>
+                            
+                            <!-- Decimal Places -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Decimals" />
+                                <TextBox Grid.Column="1" Text="{Binding RandomDecimalPlaces, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Number of decimal places for float/double" />
+                            </Grid>
+                            
+                            <!-- Include Options (for strings) -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="6" CornerRadius="3" Margin="0,0,0,6"
+                                    Visibility="{Binding RandomShowStringOptions, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="Character Sets" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                    <CheckBox Content="Uppercase (A-Z)" IsChecked="{Binding RandomIncludeUpper}" Margin="0,0,0,2" />
+                                    <CheckBox Content="Lowercase (a-z)" IsChecked="{Binding RandomIncludeLower}" Margin="0,0,0,2" />
+                                    <CheckBox Content="Numbers (0-9)" IsChecked="{Binding RandomIncludeNumbers}" Margin="0,0,0,2" />
+                                    <CheckBox Content="Special Characters" IsChecked="{Binding RandomIncludeSpecial}" Margin="0,0,0,2" />
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- Array Settings -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="6" CornerRadius="3" Margin="0,0,0,6"
+                                    Visibility="{Binding RandomShowArrayOptions, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="Array Settings" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Array Length" />
+                                        <TextBox Grid.Column="1" Text="{Binding RandomArrayLength, UpdateSourceTrigger=PropertyChanged}" />
+                                    </Grid>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Item Type" />
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding RandomItemTypeOptions}"
+                                                  SelectedItem="{Binding RandomItemType, UpdateSourceTrigger=PropertyChanged}" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- JSON Structure Builder -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="6" CornerRadius="3" Margin="0,0,0,6"
+                                    Visibility="{Binding RandomShowJsonOptions, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="JSON Structure Builder" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                    <TextBlock Text="Define keys and types. Add nested objects or arrays for complex structures." 
+                                               Foreground="{DynamicResource TextMutedBrush}" FontStyle="Italic" TextWrapping="Wrap" Margin="0,0,0,6" />
+                                    
+                                    <!-- Action Buttons -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Content="+ Add Key" Click="AddJsonKey_Click" Padding="8,4" Margin="0,0,4,0" />
+                                        <Button Content="+ Add Object" Click="AddJsonObject_Click" Padding="8,4" Margin="0,0,4,0" />
+                                        <Button Content="+ Add Array" Click="AddJsonArray_Click" Padding="8,4" Margin="0,0,4,0" />
+                                        <Button Content="Clear All" Click="ClearJsonStructure_Click" Padding="8,4" />
+                                    </StackPanel>
+                                    
+                                    <!-- JSON Tree View -->
+                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" MaxHeight="300">
+                                        <TreeView ItemsSource="{Binding JsonStructureNodes}" 
+                                                  Background="{DynamicResource WindowBackgroundBrush}">
+                                            <TreeView.ItemTemplate>
+                                                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                                    <StackPanel Orientation="Vertical" Margin="0,2">
+                                                        <!-- Main Row -->
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <!-- Indent based on nesting level -->
+                                                            <Border Width="{Binding NestingLevel, Converter={StaticResource NestingToWidthConverter}}" />
+                                                            
+                                                            <!-- Expand/Collapse Button -->
+                                                            <Button Content="{Binding IsExpanded, Converter={StaticResource BoolToExpandConverter}}"
+                                                                    Width="20" Height="20" Padding="0"
+                                                                    Visibility="{Binding ValueType, Converter={StaticResource HasChildrenConverter}}"
+                                                                    Click="ToggleExpand_Click"
+                                                                    Tag="{Binding}" />
+                                                            
+                                                            <!-- Key Name -->
+                                                            <TextBox Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}" 
+                                                                     Width="120" Height="22" Padding="2"
+                                                                     ToolTip="Property name" />
+                                                            
+                                                            <TextBlock Text=":" VerticalAlignment="Center" Margin="4,0" />
+                                                            
+                                                            <!-- Value Type -->
+                                                                <ComboBox ItemsSource="{Binding Source={x:Static editor:JsonStructureNode.ValueTypes}}"
+                                                                      SelectedItem="{Binding ValueType, UpdateSourceTrigger=PropertyChanged}"
+                                                                      Width="100" Height="22"
+                                                                      ToolTip="Value type" />
+                                                            
+                                                            <!-- Array Settings (visible for arrays) -->
+                                                            <StackPanel Orientation="Horizontal" Visibility="{Binding ShowArraySettings, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                <TextBlock Text="Length:" VerticalAlignment="Center" Margin="8,0,2,0" />
+                                                                <TextBox Text="{Binding ArrayLength, UpdateSourceTrigger=PropertyChanged}" 
+                                                                         Width="40" Height="22" Padding="2" />
+                                                                
+                                                                <TextBlock Text="Items:" VerticalAlignment="Center" Margin="8,0,2,0" />
+                                                                <ComboBox ItemsSource="{Binding Source={x:Static editor:JsonStructureNode.ArrayItemTypes}}"
+                                                                          SelectedItem="{Binding ItemType, UpdateSourceTrigger=PropertyChanged}"
+                                                                          Width="80" Height="22" />
+                                                            </StackPanel>
+                                                            
+                                                            <!-- Action Buttons -->
+                                                            <StackPanel Orientation="Horizontal" Margin="8,0,0,0">
+                                                                <Button Content="+" Width="22" Height="22" Padding="0" Margin="0,0,2,0"
+                                                                        Click="AddChildKey_Click" Tag="{Binding}"
+                                                                        ToolTip="Add child key" />
+                                                                <Button Content="{}{ }" Width="22" Height="22" Padding="0" Margin="0,0,2,0"
+                                                                        Click="AddNestedObject_Click" Tag="{Binding}"
+                                                                        Visibility="{Binding ShowObjectChildren, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                        ToolTip="Add nested object" />
+                                                                <Button Content="[ ]" Width="22" Height="22" Padding="0" Margin="0,0,2,0"
+                                                                        Click="AddNestedArray_Click" Tag="{Binding}"
+                                                                        Visibility="{Binding ShowObjectChildren, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                        ToolTip="Add nested array" />
+                                                                <Button Content="X" Width="22" Height="22" Padding="0"
+                                                                        Click="RemoveJsonNode_Click" Tag="{Binding}"
+                                                                        ToolTip="Remove" Foreground="Red" />
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                        
+                                                        <!-- Array Item Children (for arrays with object items) -->
+                                                        <StackPanel Visibility="{Binding ShowArrayItemObjectChildren, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                    Margin="20,4,0,0">
+                                                            <TextBlock Text="Array Item Properties:" FontWeight="SemiBold" Margin="0,0,0,4" 
+                                                                       Foreground="{DynamicResource TextMutedBrush}" />
+                                                            <ItemsControl ItemsSource="{Binding ArrayItemChildren}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <StackPanel Orientation="Horizontal" Margin="0,2">
+                                                                            <TextBlock Text="  ► " VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}" />
+                                                                            <TextBox Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}" 
+                                                                                     Width="100" Height="22" Padding="2" />
+                                                                            <TextBlock Text=":" VerticalAlignment="Center" Margin="4,0" />
+                                                                            <ComboBox ItemsSource="{Binding Source={x:Static editor:JsonStructureNode.ValueTypes}}"
+                                                                                      SelectedItem="{Binding ValueType, UpdateSourceTrigger=PropertyChanged}"
+                                                                                      Width="90" Height="22" />
+                                                                            <Button Content="X" Width="22" Height="22" Padding="0" Margin="4,0,0,0"
+                                                                                    Click="RemoveArrayItem_Click" Tag="{Binding}"
+                                                                                    ToolTip="Remove" Foreground="Red" />
+                                                                        </StackPanel>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                            <Button Content="+ Add Array Item Key" Click="AddArrayItemKey_Click" Tag="{Binding}"
+                                                                    Padding="8,2" Margin="0,4,0,0" HorizontalAlignment="Left"
+                                                                    ToolTip="Add a property to array items" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </HierarchicalDataTemplate>
+                                            </TreeView.ItemTemplate>
+                                        </TreeView>
+                                    </Border>
+                                    
+                                    <!-- Preview -->
+                                    <Expander Header="Preview JSON" Margin="0,6,0,0" IsExpanded="False">
+                                        <TextBox Text="{Binding RandomJsonStructure, Mode=OneWay}"
+                                                 IsReadOnly="True"
+                                                 AcceptsReturn="True"
+                                                 Height="80"
+                                                 VerticalScrollBarVisibility="Auto"
+                                                 TextWrapping="Wrap"
+                                                 FontFamily="Consolas" />
+                                    </Expander>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- Email Domain -->
+                            <Grid Margin="0,0,0,6"
+                                  Visibility="{Binding RandomShowEmailOption, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Email Domain" />
+                                <TextBox Grid.Column="1" Text="{Binding RandomEmailDomain, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Custom email domain (optional, e.g., company.com)" />
+                            </Grid>
+                            
+                            <!-- Variable Name -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Variable Name" />
+                                <TextBox Grid.Column="1" Text="{Binding RandomVariableName, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Optional: Store result in this variable" />
                             </Grid>
                         </StackPanel>
                     </Border>

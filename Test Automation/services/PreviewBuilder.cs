@@ -46,6 +46,7 @@ namespace Test_Automation.Services
                 IfData ifData => CreateIfPreview(ifData, result),
                 ThreadsData threads => CreateThreadsPreview(threads, result),
                 TestPlanData testPlan => CreateTestPlanPreview(testPlan, result),
+                RandomGeneratorData randomGen => CreateRandomGeneratorPreview(randomGen, result),
                 _ => CreateGenericPreview(result)
             };
 
@@ -259,6 +260,15 @@ namespace Test_Automation.Services
                 TestPlanName = data.TestPlanName,
                 Description = data.Description,
                 ComponentCount = data.Components?.Count ?? 0
+            };
+        }
+
+        private RandomGeneratorPreviewData CreateRandomGeneratorPreview(RandomGeneratorData data, ExecutionResult result)
+        {
+            return new RandomGeneratorPreviewData
+            {
+                GeneratedValue = data.GeneratedValue,
+                OutputType = data.OutputType
             };
         }
 
