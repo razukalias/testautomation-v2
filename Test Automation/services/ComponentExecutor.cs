@@ -409,26 +409,57 @@ namespace Test_Automation.Services
                 threadsData.ThreadCount = threadCount;
             }
 
+            TraceLog(threads, result, $"[ComponentExecutor] Starting {threadCount} threads with ISOLATED variable scoping", TraceLevel.Info);
+
+            // Create a list to track thread-local contexts for optional post-merge
+            var threadContexts = new List<(int ThreadIndex, ExecutionContext Context)>();
+
             var taskList = Enumerable.Range(1, threadCount)
                 .Select(index => Task.Run(async () =>
                 {
                     CurrentThreadIndex.Value = index;
                     CurrentThreadGroupId.Value = threads.Id;
+
+                    // Create a thread-local context with isolated variables
+                    var threadContext = context.CreateThreadLocalContext(index);
+                    threadContexts.Add((index, threadContext));
+
+                    TraceLog(threads, result, $"[THREAD-{index}] Started with isolated variable scope", TraceLevel.Verbose);
+
                     foreach (var child in threads.Children)
                     {
                         ThrowIfStopped(context, child.Name);
-                        var childResult = await ExecuteComponentTree(child, context);
+                        var childResult = await ExecuteComponentTree(child, threadContext);
                         lock (context.Results)
                         {
                             context.Results.Add(childResult);
                         }
                     }
+
+                    // Log what variables this thread set
+                    var localVars = threadContext.GetLocalVariablesOnly();
+                    if (localVars.Count > 0)
+                    {
+                        TraceLog(threads, result, $"[THREAD-{index}] Set {localVars.Count} thread-local variables: [{string.Join(", ", localVars.Keys.Take(10))}]", TraceLevel.Verbose);
+                    }
+
+                    TraceLog(threads, result, $"[THREAD-{index}] Completed", TraceLevel.Verbose);
                 }, context.StopToken))
                 .ToList();
 
             await Task.WhenAll(taskList);
 
+            TraceLog(threads, result, $"[ComponentExecutor] All {threadCount} threads completed", TraceLevel.Info);
+
+            // Log thread-local variable summary
+            foreach (var (threadIndex, threadContext) in threadContexts)
+            {
+                var localVars = threadContext.GetLocalVariablesOnly();
+                TraceLog(threads, result, $"[THREAD-{threadIndex}] Final local variables ({localVars.Count}): [{string.Join(", ", localVars.Select(kv => $"{kv.Key}={TruncateForLogging(kv.Value, 30)}").Take(5))}]", TraceLevel.Verbose);
+            }
+
             // Re-apply variable extractors after threads complete so they capture final state
+            // Note: Extractors run on the parent context, not thread-local contexts
             if (threads.Extractors != null && threads.Extractors.Count > 0)
             {
                 TraceLog(threads, result, $"[ComponentExecutor] Re-applying {threads.Extractors.Count} variable extractors after threads completion", TraceLevel.Verbose);
@@ -436,6 +467,14 @@ namespace Test_Automation.Services
             }
 
             return result;
+        }
+
+        private static string TruncateForLogging(object? value, int maxLength = 200)
+        {
+            if (value == null) return "null";
+            var text = value.ToString() ?? string.Empty;
+            if (text.Length <= maxLength) return text;
+            return text.Substring(0, maxLength) + "...[truncated]";
         }
 
         private static IEnumerable<object> ResolveCollection(ExecutionContext context, string? sourceVariable)

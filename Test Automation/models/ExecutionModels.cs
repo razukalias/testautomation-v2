@@ -65,6 +65,82 @@ namespace Test_Automation.Models
         [JsonIgnore]
         public CancellationToken StopToken => _stopSource.Token;
 
+        /// <summary>
+        /// Parent context for thread-local variable scoping. When set, this context
+        /// inherits variables from the parent but has its own isolated variable storage.
+        /// Variables set in this context only affect this thread.
+        /// </summary>
+        [JsonIgnore]
+        public ExecutionContext? ParentContext { get; set; }
+
+        /// <summary>
+        /// Thread index for this context. Used to identify which thread owns this context.
+        /// -1 or 0 indicates the main/root context.
+        /// </summary>
+        [JsonIgnore]
+        public int ThreadIndex { get; set; } = 0;
+
+        /// <summary>
+        /// Creates a thread-local child context that inherits from this parent context.
+        /// Variables set in the child context are isolated and don't affect the parent.
+        /// </summary>
+        /// <param name="threadIndex">The thread index for this child context</param>
+        /// <returns>A new ExecutionContext with isolated variables but parent inheritance</returns>
+        public ExecutionContext CreateThreadLocalContext(int threadIndex)
+        {
+            var childContext = new ExecutionContext
+            {
+                ExecutionId = this.ExecutionId, // Same execution ID for grouping
+                ParentContext = this,
+                ThreadIndex = threadIndex,
+                StartTime = this.StartTime,
+                IsRunning = this.IsRunning,
+                Status = this.Status,
+                HierarchicalVariables = this.HierarchicalVariables, // Share hierarchical vars
+                Results = this.Results // Share results list (with locking)
+            };
+
+            Logger.Log($"[THREAD] Created thread-local context for thread {threadIndex}", 
+                Test_Automation.Services.LogLevel.Info, executionId: ExecutionId);
+
+            return childContext;
+        }
+
+        /// <summary>
+        /// Gets the root execution context (walks up parent chain)
+        /// </summary>
+        [JsonIgnore]
+        public ExecutionContext RootContext
+        {
+            get
+            {
+                var current = this;
+                while (current.ParentContext != null)
+                {
+                    current = current.ParentContext;
+                }
+                return current;
+            }
+        }
+
+        /// <summary>
+        /// Merges all thread-local variables back into the root context.
+        /// Call this after all threads complete to collect final variable state.
+        /// </summary>
+        public void MergeThreadLocalVariables()
+        {
+            if (ParentContext != null)
+            {
+                // This is a child context - merge into parent
+                foreach (var kvp in _variables)
+                {
+                    ParentContext.Variables[kvp.Key] = kvp.Value;
+                }
+                Logger.Log($"[THREAD] Merged {_variables.Count} variables from thread {ThreadIndex} to parent", 
+                    Test_Automation.Services.LogLevel.Info, executionId: ExecutionId);
+            }
+        }
+
         public void RequestStop()
         {
             IsRunning = false;
@@ -77,8 +153,9 @@ namespace Test_Automation.Models
 
         public void SaveVariablesForUi()
         {
-            // Save a copy of variables for UI to access
-            _lastExecutionVariables = new ConcurrentDictionary<string, object>(_variables);
+            // Save a copy of variables for UI to access (from root context)
+            var root = RootContext;
+            _lastExecutionVariables = new ConcurrentDictionary<string, object>(root._variables);
         }
 
         public void ResetStopRequest()
@@ -97,6 +174,10 @@ namespace Test_Automation.Models
             }
         }
 
+        /// <summary>
+        /// Sets a variable in this context. For thread-local contexts, variables are
+        /// isolated and don't affect the parent or other threads.
+        /// </summary>
         public void SetVariable(string key, object value)
         {
             var normalizedKey = key?.Trim() ?? string.Empty;
@@ -108,10 +189,15 @@ namespace Test_Automation.Models
             Variables[normalizedKey] = value;
             
             // Log variable operation at verbose level
-            Logger.Log($"[VARIABLE] SetVariable: '{normalizedKey}' = '{TruncateValue(value, 100)}'", 
+            var threadInfo = ThreadIndex > 0 ? $" [Thread-{ThreadIndex}]" : "";
+            Logger.Log($"[VARIABLE] SetVariable: '{normalizedKey}' = '{TruncateValue(value, 100)}'{threadInfo}", 
                 Test_Automation.Services.LogLevel.Verbose, executionId: ExecutionId);
         }
 
+        /// <summary>
+        /// Gets a variable value. For thread-local contexts, checks local variables first,
+        /// then falls back to parent context (inheritance).
+        /// </summary>
         public object? GetVariable(string key)
         {
             var normalizedKey = key?.Trim() ?? string.Empty;
@@ -120,25 +206,87 @@ namespace Test_Automation.Models
                 return null;
             }
 
-            var value = Variables.TryGetValue(normalizedKey, out var val) ? val : null;
-            
-            // Log variable operation at verbose level
-            Logger.Log($"[VARIABLE] GetVariable: '{normalizedKey}' = '{TruncateValue(value, 100)}'", 
+            // Check local variables first
+            if (Variables.TryGetValue(normalizedKey, out var val))
+            {
+                var threadInfo = ThreadIndex > 0 ? $" [Thread-{ThreadIndex}]" : "";
+                Logger.Log($"[VARIABLE] GetVariable: '{normalizedKey}' = '{TruncateValue(val, 100)}'{threadInfo}", 
+                    Test_Automation.Services.LogLevel.Verbose, executionId: ExecutionId);
+                return val;
+            }
+
+            // Fall back to parent context (inheritance for read-only access)
+            if (ParentContext != null)
+            {
+                return ParentContext.GetVariable(key);
+            }
+
+            Logger.Log($"[VARIABLE] GetVariable: '{normalizedKey}' = null", 
                 Test_Automation.Services.LogLevel.Verbose, executionId: ExecutionId);
-            
-            return value;
+            return null;
         }
 
+        /// <summary>
+        /// Checks if a variable exists. For thread-local contexts, checks local first,
+        /// then falls back to parent context.
+        /// </summary>
         public bool HasVariable(string key)
         {
             var normalizedKey = key?.Trim() ?? string.Empty;
-            var exists = !string.IsNullOrWhiteSpace(normalizedKey) && Variables.ContainsKey(normalizedKey);
-            
-            // Log variable operation at verbose level
-            Logger.Log($"[VARIABLE] HasVariable: '{normalizedKey}' = {exists}", 
-                Test_Automation.Services.LogLevel.Verbose, executionId: ExecutionId);
-            
-            return exists;
+            if (string.IsNullOrWhiteSpace(normalizedKey))
+            {
+                return false;
+            }
+
+            // Check local variables first
+            if (Variables.ContainsKey(normalizedKey))
+            {
+                return true;
+            }
+
+            // Fall back to parent context
+            if (ParentContext != null)
+            {
+                return ParentContext.HasVariable(key);
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Gets all variables including inherited ones from parent contexts.
+        /// Local variables override parent variables with the same name.
+        /// </summary>
+        public Dictionary<string, object> GetAllVariables()
+        {
+            var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+            // First, collect from parent (if exists)
+            if (ParentContext != null)
+            {
+                var parentVars = ParentContext.GetAllVariables();
+                foreach (var kvp in parentVars)
+                {
+                    result[kvp.Key] = kvp.Value;
+                }
+            }
+
+            // Then, overlay local variables (they override parent)
+            foreach (var kvp in Variables)
+            {
+                result[kvp.Key] = kvp.Value;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Gets only the variables set in this thread-local context (excluding inherited).
+        /// Useful for debugging and understanding what each thread modified.
+        /// </summary>
+        public Dictionary<string, object> GetLocalVariablesOnly()
+        {
+            return new Dictionary<string, object>(_variables, StringComparer.OrdinalIgnoreCase);
         }
 
         private static string TruncateValue(object? value, int maxLength = 200)
@@ -163,13 +311,17 @@ namespace Test_Automation.Models
         /// <summary>
         /// Gets variables for PreviewVariables - builds hierarchical structure similar to UI.
         /// Returns a nested dictionary that can be properly serialized to JSON with nested objects.
+        /// For thread-local contexts, includes variables from parent contexts (inheritance).
         /// </summary>
         public Dictionary<string, object> GetAllVariablesForPreview()
         {
             var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
-            // First, add all flat variables (backward compatibility) — coerce JSON strings to objects
-            foreach (var kvp in Variables)
+            // Get all variables including inherited ones from parent contexts
+            var allVars = GetAllVariables();
+
+            // Add all flat variables (backward compatibility) — coerce JSON strings to objects
+            foreach (var kvp in allVars)
             {
                 result[kvp.Key] = CoercePreviewValue(kvp.Value ?? string.Empty);
             }
@@ -206,10 +358,10 @@ namespace Test_Automation.Models
                             var planVarsNested = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                             foreach (var varKvp in planVars)
                             {
-                                // Use current value from Variables if it exists (updated by extractors)
+                                // Use current value from allVars if it exists (updated by extractors or thread-local)
                                 // Otherwise use the hierarchical value
                                 object finalValue;
-                                if (Variables.TryGetValue(varKvp.Key, out var currentValue))
+                                if (allVars.TryGetValue(varKvp.Key, out var currentValue))
                                 {
                                     // Coerce the value to parse JSON strings as objects
                                     finalValue = CoercePreviewValue(currentValue);
