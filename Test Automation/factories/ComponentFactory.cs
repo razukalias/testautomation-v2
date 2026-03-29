@@ -20,6 +20,7 @@ namespace Test_Automation.Factories
                 "if" => new If(),
                 "loop" => new Loop(),
                 "foreach" => new Foreach(),
+                "while" => new While(),
                 "threads" => new Threads(),
                 "config" => new Config(),
                 "testplan" => new TestPlan(),
@@ -28,6 +29,7 @@ namespace Test_Automation.Factories
                 "script" => new Script(),
                 "randomgenerator" => new RandomGenerator(),
                 "random" => new RandomGenerator(),
+                "file" => new FileComponent(),
                 _ => throw new ArgumentException($"Unknown component type: {componentType}")
             };
         }

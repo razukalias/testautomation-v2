@@ -1137,6 +1137,232 @@
                     </Border>
 
                         <Border  BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                            Visibility="{Binding IsFileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="File" FontWeight="SemiBold" Margin="0,0,0,6" />
+                            
+                            <!-- Operation Selection -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Operation" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding FileOperationOptions}"
+                                          SelectedItem="{Binding FileOperation, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                            
+                            <!-- Source Path -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowSourcePath, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Source Path" />
+                                <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding FileSourcePath, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Grid.Column="2" Content="Browse File" Width="85" Margin="0,0,6,0" Click="BrowseFileSourceFileButton_Click" 
+                                        Visibility="{Binding FileShowSourceFileBrowse, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                <Button Grid.Column="3" Content="Browse Folder" Width="95" Click="BrowseFileSourceFolderButton_Click" 
+                                        Visibility="{Binding FileShowSourceFolderBrowse, Converter={StaticResource BoolToVisibilityConverter}}" />
+                            </Grid>
+                            
+                            <!-- Source Path Resolved -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowSourcePath, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Resolved Path" />
+                                <TextBox Grid.Column="1" Text="{Binding FileSourcePathResolved, Mode=OneWay}" IsReadOnly="True" />
+                            </Grid>
+                            
+                            <!-- Destination Path -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowDestinationPath, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Destination Path" />
+                                <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding FileDestinationPath, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Grid.Column="2" Content="Browse File" Width="85" Margin="0,0,6,0" Click="BrowseFileDestinationFileButton_Click" 
+                                        Visibility="{Binding FileShowDestinationFileBrowse, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                <Button Grid.Column="3" Content="Browse Folder" Width="95" Click="BrowseFileDestinationFolderButton_Click" 
+                                        Visibility="{Binding FileShowDestinationFolderBrowse, Converter={StaticResource BoolToVisibilityConverter}}" />
+                            </Grid>
+                            
+                            <!-- Destination Path Resolved -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowDestinationPath, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Resolved Path" />
+                                <TextBox Grid.Column="1" Text="{Binding FileDestinationPathResolved, Mode=OneWay}" IsReadOnly="True" />
+                            </Grid>
+                            
+                            <!-- Destination Folder -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowDestinationFolder, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Destination Folder" />
+                                <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding FileDestinationFolder, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Grid.Column="2" Content="Browse Folder" Width="95" Click="BrowseFileDestinationFolderButton_Click" />
+                            </Grid>
+                            
+                            <!-- Destination File Name -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowDestinationFileName, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Destination File Name" />
+                                <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding FileDestinationFileName, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Grid.Column="2" Content="Browse File" Width="85" Click="BrowseFileDestinationFileButton_Click" />
+                            </Grid>
+                            
+                            <!-- Content (for Write/CreateFile) -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowContent, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Top" Text="Content" />
+                                <TextBox Grid.Column="1" Text="{Binding FileContent, UpdateSourceTrigger=PropertyChanged}" 
+                                         AcceptsReturn="True" Height="120" VerticalScrollBarVisibility="Auto" />
+                            </Grid>
+                            
+                            <!-- Encoding -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowEncoding, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Encoding" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding FileEncodingOptions}"
+                                          SelectedItem="{Binding FileEncoding, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                            
+                            <!-- Overwrite -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowOverwrite, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Overwrite" />
+                                <CheckBox Grid.Column="1" IsChecked="{Binding FileOverwrite}" VerticalAlignment="Center" />
+                            </Grid>
+                            
+                            <!-- Append -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowAppend, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Append" />
+                                <CheckBox Grid.Column="1" IsChecked="{Binding FileAppend}" VerticalAlignment="Center" />
+                            </Grid>
+                            
+                            <!-- File Filter -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowFileFilter, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="File Filter" />
+                                <TextBox Grid.Column="1" Text="{Binding FileFilter, UpdateSourceTrigger=PropertyChanged}" 
+                                         ToolTip="e.g., *.txt, *.csv, *.*" />
+                            </Grid>
+                            
+                            <!-- Read Mode -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowReadMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Read Mode" />
+                                <ComboBox Grid.Column="1" Margin="0,0,6,0"
+                                          ItemsSource="{Binding FileReadModeOptions}"
+                                          SelectedItem="{Binding FileReadMode, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Grid.Column="2" Content="Select Files..." Width="100" 
+                                        Click="SelectFilesButton_Click"
+                                        Visibility="{Binding FileShowSelectedFilesBrowse, Converter={StaticResource BoolToVisibilityConverter}}" />
+                            </Grid>
+                            
+                            <!-- Output Variable -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowOutputVariable, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output Variable" />
+                                <ComboBox Grid.Column="1" 
+                                          ItemsSource="{Binding AvailableVariablesForExtractor}"
+                                          SelectedItem="{Binding FileOutputVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True"
+                                          ToolTip="Variable name to store result"
+                                          Margin="0,0,6,0" />
+                                <TextBlock Grid.Column="2" VerticalAlignment="Center" >
+                                    <TextBlock.Text>
+                                        <MultiBinding Converter="{StaticResource VariableUsageLabelConverter}">
+                                            <Binding Path="FileOutputVariable" />
+                                            <Binding Path="VariableUsageVersion" />
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                    <TextBlock.ToolTip>
+                                        <MultiBinding Converter="{StaticResource VariableUsageTooltipConverter}">
+                                            <Binding Path="FileOutputVariable" />
+                                            <Binding Path="VariableUsageVersion" />
+                                        </MultiBinding>
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
+                            </Grid>
+                            
+                            <!-- Recursive -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowRecursive, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Recursive" />
+                                <CheckBox Grid.Column="1" IsChecked="{Binding FileRecursive}" VerticalAlignment="Center" />
+                            </Grid>
+                            
+                            <!-- Include Metadata -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding FileShowIncludeMetadata, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Include Metadata" />
+                                <CheckBox Grid.Column="1" IsChecked="{Binding FileIncludeMetadata}" VerticalAlignment="Center" />
+                            </Grid>
+                            
+                            <!-- Preview/Result area (read-only) -->
+                            <Border BorderThickness="1" CornerRadius="3" Padding="8" Margin="0,8,0,0"
+                                    Visibility="{Binding IsFileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="Result Preview" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                    <TextBox Text="{Binding FileResultPreview, Mode=OneWay}" 
+                                             IsReadOnly="True" AcceptsReturn="True" Height="100"
+                                             VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="11" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                        <Border  BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsTimerSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                         <Grid >
                             <Grid.ColumnDefinitions>
@@ -1594,6 +1820,80 @@
                                 <TextBox Grid.Column="1" Text="{Binding RandomVariableName, UpdateSourceTrigger=PropertyChanged}"
                                          ToolTip="Optional: Store result in this variable" />
                             </Grid>
+                        </StackPanel>
+                    </Border>
+
+                        <Border  BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                            Visibility="{Binding IsWhileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="While" FontWeight="SemiBold" Margin="0,0,0,6" />
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Max Iterations" />
+                                <TextBox Grid.Column="1" Text="{Binding WhileMaxIterations, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Timeout (ms)" />
+                                <TextBox Grid.Column="1" Text="{Binding WhileTimeoutMs, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Evaluation" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding WhileEvaluationModeOptions}"
+                                          SelectedItem="{Binding WhileEvaluationMode, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                            <TextBlock Text="Condition Rows" FontWeight="SemiBold" Margin="0,0,0,6" />
+                            <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding WhileConditionRows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,0,0,6">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="80" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="80" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="80" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <ComboBox Grid.Column="0"
+                                                          ItemsSource="{Binding DataContext.LogicalOperatorOptions, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          SelectedItem="{Binding LogicalOperator, UpdateSourceTrigger=PropertyChanged}" />
+                                                <TextBox Grid.Column="1" Margin="4,0,4,0" Text="{Binding Variable, UpdateSourceTrigger=PropertyChanged}" />
+                                                <ComboBox Grid.Column="2"
+                                                          ItemsSource="{Binding DataContext.AssertionConditionOptions, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          SelectedItem="{Binding Operator, UpdateSourceTrigger=PropertyChanged}" />
+                                                <TextBox Grid.Column="3" Margin="4,0,4,0" Text="{Binding Expected, UpdateSourceTrigger=PropertyChanged}" />
+                                                <ComboBox Grid.Column="4"
+                                                          ItemsSource="{Binding DataContext.ActionOptions, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          SelectedItem="{Binding Action, UpdateSourceTrigger=PropertyChanged}" />
+                                                <Button Grid.Column="5" Content="X" Width="24" Height="24" Margin="4,0,0,0"
+                                                        Click="RemoveConditionRowButton_Click"
+                                                        Tag="{Binding}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <Button Content="Add Row" Width="80" Click="AddConditionRowButton_Click" />
+                            </StackPanel>
+                            <Expander Header="JSON Preview" Margin="0,6,0,0" IsExpanded="False">
+                                <TextBox Text="{Binding WhileConditionJson, Mode=OneWay}"
+                                         AcceptsReturn="True" Height="80" VerticalScrollBarVisibility="Auto"
+                                         FontFamily="Consolas" IsReadOnly="True" />
+                            </Expander>
                         </StackPanel>
                     </Border>
 

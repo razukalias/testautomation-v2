@@ -248,6 +248,13 @@ namespace Test_Automation.Models.Editor
             {
                 Settings.Add(new NodeSetting("Condition", "${status} == 200"));
             }
+            else if (type == "While")
+            {
+                Settings.Add(new NodeSetting("ConditionJson", "[]"));
+                Settings.Add(new NodeSetting("MaxIterations", "1000"));
+                Settings.Add(new NodeSetting("TimeoutMs", "0"));
+                Settings.Add(new NodeSetting("EvaluationMode", "While"));
+            }
             else if (type == "Threads")
             {
                 Settings.Add(new NodeSetting("ThreadCount", "1"));

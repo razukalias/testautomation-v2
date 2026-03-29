@@ -97,6 +97,7 @@ namespace Test_Automation.Services
                 {
                     LoopData loop => loop.CurrentIteration.ToString(),
                     ForeachData fe => fe.CurrentIndex.ToString(),
+                    WhileData whileData => whileData.Properties.TryGetValue("IterationsExecuted", out var iter) ? iter.ToString() : "0",
                     ScriptData script => script.ExecutionResult,
                     HttpData http => http.ResponseBody,
                     GraphQlData gql => gql.ResponseBody,
@@ -218,6 +219,11 @@ namespace Test_Automation.Services
             if (component is Foreach foreachComponent)
             {
                 return await ExecuteForeach(foreachComponent, context);
+            }
+
+            if (component is While whileComponent)
+            {
+                return await ExecuteWhile(whileComponent, context);
             }
 
             return await ExecuteWithChildren(component, context);
@@ -403,6 +409,173 @@ namespace Test_Automation.Services
             }
 
             return result;
+        }
+
+        private async Task<ExecutionResult> ExecuteWhile(While whileComponent, ExecutionContext context)
+        {
+            var result = await ExecuteComponent(whileComponent, context);
+            
+            // Parse settings
+            var conditionJson = whileComponent.Settings.TryGetValue("ConditionJson", out var json) ? json : "[]";
+            var maxIterations = 1000;
+            if (whileComponent.Settings.TryGetValue("MaxIterations", out var maxStr) && int.TryParse(maxStr, out var parsed))
+                maxIterations = parsed;
+            var timeoutMs = 0;
+            if (whileComponent.Settings.TryGetValue("TimeoutMs", out var timeoutStr) && int.TryParse(timeoutStr, out var parsedTimeout))
+                timeoutMs = parsedTimeout;
+            var evaluationMode = whileComponent.Settings.TryGetValue("EvaluationMode", out var mode) ? mode : "While";
+            var isDoWhile = string.Equals(evaluationMode, "DoWhile", StringComparison.OrdinalIgnoreCase);
+            
+            List<ConditionRow> conditionRows;
+            try
+            {
+                conditionRows = System.Text.Json.JsonSerializer.Deserialize<List<ConditionRow>>(conditionJson) ?? new List<ConditionRow>();
+            }
+            catch
+            {
+                conditionRows = new List<ConditionRow>();
+            }
+            
+            var whileData = result.Data as WhileData;
+            if (whileData != null)
+            {
+                whileData.ConditionRows = conditionRows;
+                whileData.MaxIterations = maxIterations;
+                whileData.TimeoutMs = timeoutMs;
+                whileData.EvaluationMode = evaluationMode;
+                whileData.ChildComponents = whileComponent.Children.Select(c => c.Id).ToList();
+            }
+            
+            var iteration = 0;
+            var startTime = DateTime.UtcNow;
+            string? pendingAction = null;
+            
+            // Helper to evaluate condition rows
+            bool EvaluateCondition()
+            {
+                if (conditionRows.Count == 0)
+                    return true;
+                
+                bool? overallResult = null;
+                foreach (var row in conditionRows)
+                {
+                    // Build condition string: assume Variable is a variable placeholder, Operator is one of ==, !=, >, etc.
+                    // For simplicity, we ignore Source and JsonPath for now.
+                    var left = row.Variable ?? string.Empty;
+                    var op = MapOperator(row.Operator);
+                    var right = row.Expected ?? string.Empty;
+                    var conditionStr = $"{left} {op} {right}";
+                    var rowResult = _conditionService.Evaluate(conditionStr, context);
+                    
+                    // Combine with logical operator
+                    if (row.LogicalOperator.Equals("Or", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (overallResult.HasValue && overallResult.Value == false)
+                            overallResult = rowResult;
+                        else if (!overallResult.HasValue)
+                            overallResult = rowResult;
+                    }
+                    else // And or default
+                    {
+                        if (!overallResult.HasValue)
+                            overallResult = rowResult;
+                        else
+                            overallResult = overallResult.Value && rowResult;
+                    }
+                    
+                    // Track action
+                    if (!string.IsNullOrEmpty(row.Action) && !row.Action.Equals("None", StringComparison.OrdinalIgnoreCase))
+                        pendingAction = row.Action;
+                    
+                    // Early exit if AND condition already false
+                    if (row.LogicalOperator.Equals("And", StringComparison.OrdinalIgnoreCase) && overallResult.HasValue && !overallResult.Value)
+                        break;
+                }
+                return overallResult ?? false;
+            }
+            
+            // Loop execution
+            while (true)
+            {
+                // Check timeout
+                if (timeoutMs > 0 && (DateTime.UtcNow - startTime).TotalMilliseconds > timeoutMs)
+                    break;
+                
+                // Check max iterations
+                if (iteration >= maxIterations)
+                    break;
+                
+                // Evaluate condition (pre-loop for while, post-loop for do-while)
+                bool conditionMet;
+                if (!isDoWhile)
+                {
+                    conditionMet = EvaluateCondition();
+                    if (!conditionMet)
+                        break;
+                }
+                
+                // Check for pending break/continue from previous iteration
+                if (pendingAction != null)
+                {
+                    if (pendingAction.Equals("Break", StringComparison.OrdinalIgnoreCase))
+                        break;
+                    if (pendingAction.Equals("Continue", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Skip child execution, but still need to evaluate condition again (loop continues)
+                        pendingAction = null;
+                        iteration++;
+                        continue;
+                    }
+                }
+                
+                // Execute child components
+                foreach (var child in whileComponent.Children)
+                {
+                    ThrowIfStopped(context, child.Name);
+                    var childResult = await ExecuteComponentTree(child, context);
+                    lock (context.Results)
+                    {
+                        context.Results.Add(childResult);
+                    }
+                }
+                
+                iteration++;
+                if (whileData != null)
+                {
+                    whileData.Properties["IterationsExecuted"] = iteration;
+                }
+                
+                // If do-while, evaluate condition after execution
+                if (isDoWhile)
+                {
+                    conditionMet = EvaluateCondition();
+                    if (!conditionMet)
+                        break;
+                }
+            }
+            
+            // Re-apply variable extractors after while completes
+            if (whileComponent.Extractors != null && whileComponent.Extractors.Count > 0)
+            {
+                TraceLog(whileComponent, result, $"[ComponentExecutor] Re-applying {whileComponent.Extractors.Count} variable extractors after while completion", TraceLevel.Verbose);
+                _variableService.ApplyVariableExtractors(whileComponent, context, result.Data as ComponentData, (msg, level) => TraceLog(whileComponent, result, msg, level), result);
+            }
+            
+            return result;
+        }
+        
+        private static string MapOperator(string operatorName)
+        {
+            return operatorName switch
+            {
+                "Equals" => "==",
+                "NotEquals" => "!=",
+                "GreaterThan" => ">",
+                "GreaterOrEqual" => ">=",
+                "LessThan" => "<",
+                "LessOrEqual" => "<=",
+                _ => "=="
+            };
         }
 
         private async Task<ExecutionResult> ExecuteThreads(Threads threads, ExecutionContext context)

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Test_Automation.Models.Editor;
 
 namespace Test_Automation.Models
 {
@@ -293,5 +294,95 @@ public class VariableExtractorData : ComponentData
 
         [JsonPropertyName("outputType")]
         public string OutputType { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// While component model
+    /// </summary>
+    public class WhileData : ComponentData
+    {
+        [JsonPropertyName("conditionRows")]
+        public List<ConditionRow> ConditionRows { get; set; } = new List<ConditionRow>();
+
+        [JsonPropertyName("maxIterations")]
+        public int MaxIterations { get; set; } = 1000;
+
+        [JsonPropertyName("timeoutMs")]
+        public int TimeoutMs { get; set; } = 0;
+
+        [JsonPropertyName("evaluationMode")]
+        public string EvaluationMode { get; set; } = "While";
+
+        [JsonPropertyName("childComponents")]
+        public List<string> ChildComponents { get; set; } = new List<string>();
+    }
+
+    /// <summary>
+    /// File component model
+    /// </summary>
+    public class FileData : ComponentData
+    {
+        [JsonPropertyName("operation")]
+        public string Operation { get; set; } = string.Empty;
+
+        [JsonPropertyName("sourcePath")]
+        public string SourcePath { get; set; } = string.Empty;
+
+        [JsonPropertyName("destinationPath")]
+        public string DestinationPath { get; set; } = string.Empty;
+
+        [JsonPropertyName("destinationFolder")]
+        public string DestinationFolder { get; set; } = string.Empty;
+
+        [JsonPropertyName("destinationFileName")]
+        public string DestinationFileName { get; set; } = string.Empty;
+
+        [JsonPropertyName("content")]
+        public string Content { get; set; } = string.Empty;
+
+        [JsonPropertyName("encoding")]
+        public string Encoding { get; set; } = "UTF-8";
+
+        [JsonPropertyName("overwrite")]
+        public bool Overwrite { get; set; } = false;
+
+        [JsonPropertyName("append")]
+        public bool Append { get; set; } = false;
+
+        [JsonPropertyName("fileFilter")]
+        public string FileFilter { get; set; } = "*.*";
+
+        [JsonPropertyName("outputVariable")]
+        public string OutputVariable { get; set; } = string.Empty;
+
+        [JsonPropertyName("readMode")]
+        public string ReadMode { get; set; } = "All"; // All or Selected
+
+        [JsonPropertyName("selectedFilePaths")]
+        public List<string> SelectedFilePaths { get; set; } = new List<string>();
+
+        [JsonPropertyName("recursive")]
+        public bool Recursive { get; set; } = false;
+
+        [JsonPropertyName("includeMetadata")]
+        public bool IncludeMetadata { get; set; } = false;
+
+        [JsonPropertyName("result")]
+        public string Result { get; set; } = string.Empty;
+
+        [JsonPropertyName("files")]
+        public List<string> Files { get; set; } = new List<string>();
+
+        [JsonPropertyName("metadata")]
+        public List<Dictionary<string, object>> Metadata { get; set; } = new List<Dictionary<string, object>>();
+
+        [JsonPropertyName("fileContents")]
+        public Dictionary<string, string> FileContents { get; set; } = new Dictionary<string, string>();
+
+        [JsonPropertyName("success")]
+        public bool Success { get; set; } = false;
+
+        [JsonPropertyName("errorMessage")]
+        public string ErrorMessage { get; set; } = string.Empty;
     }
 }

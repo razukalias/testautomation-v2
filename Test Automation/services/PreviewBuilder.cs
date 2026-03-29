@@ -47,6 +47,7 @@ namespace Test_Automation.Services
                 ThreadsData threads => CreateThreadsPreview(threads, result),
                 TestPlanData testPlan => CreateTestPlanPreview(testPlan, result),
                 RandomGeneratorData randomGen => CreateRandomGeneratorPreview(randomGen, result),
+                FileData file => CreateFilePreview(file, result),
                 _ => CreateGenericPreview(result)
             };
 
@@ -269,6 +270,20 @@ namespace Test_Automation.Services
             {
                 GeneratedValue = data.GeneratedValue,
                 OutputType = data.OutputType
+            };
+        }
+
+        private FilePreviewData CreateFilePreview(FileData data, ExecutionResult result)
+        {
+            return new FilePreviewData
+            {
+                Operation = data.Operation,
+                SourcePath = data.SourcePath,
+                DestinationPath = data.DestinationPath,
+                Success = data.Success,
+                ErrorMessage = data.ErrorMessage,
+                Result = data.Result,
+                Files = data.Files ?? new List<string>()
             };
         }
 

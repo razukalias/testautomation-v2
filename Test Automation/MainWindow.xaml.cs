@@ -78,6 +78,19 @@ namespace Test_Automation
             "Assert and Stop"
         };
 
+        public ObservableCollection<string> LogicalOperatorOptions { get; } = new ObservableCollection<string>
+        {
+            "And",
+            "Or"
+        };
+
+        public ObservableCollection<string> ActionOptions { get; } = new ObservableCollection<string>
+        {
+            "None",
+            "Break",
+            "Continue"
+        };
+
         public ObservableCollection<string> EnvironmentOptions { get; } = new ObservableCollection<string>();
 
         public ObservableCollection<string> TraceLevelOptions { get; } = new ObservableCollection<string>
@@ -605,6 +618,8 @@ namespace Test_Automation
         public bool IsVariableExtractorSelected => SelectedNode?.Type == "VariableExtractor";
         public bool IsScriptSelected => SelectedNode?.Type == "Script";
         public bool IsRandomGeneratorSelected => SelectedNode?.Type == "RandomGenerator";
+        public bool IsWhileSelected => SelectedNode?.Type == "While";
+        public bool IsFileSelected => SelectedNode?.Type == "File";
         public bool IsTestPlanSelected => SelectedNode?.Type == "TestPlan";
 
         public ExecutionType SelectedExecutionType
@@ -1477,6 +1492,34 @@ namespace Test_Automation
             set => SetSettingValue("Condition", value);
         }
 
+        public string WhileMaxIterations
+        {
+            get => GetSettingValue("MaxIterations", "1000");
+            set => SetSettingValue("MaxIterations", value);
+        }
+
+        public string WhileTimeoutMs
+        {
+            get => GetSettingValue("TimeoutMs", "0");
+            set => SetSettingValue("TimeoutMs", value);
+        }
+
+        public string WhileEvaluationMode
+        {
+            get => GetSettingValue("EvaluationMode", "While");
+            set => SetSettingValue("EvaluationMode", value);
+        }
+
+        public string WhileConditionJson
+        {
+            get => GetSettingValue("ConditionJson", "[]");
+            set => SetSettingValue("ConditionJson", value);
+        }
+
+        public ObservableCollection<string> WhileEvaluationModeOptions { get; } = new ObservableCollection<string> { "While", "DoWhile" };
+
+        public ObservableCollection<ConditionRow> WhileConditionRows { get; } = new ObservableCollection<ConditionRow>();
+
         public string ThreadCount
         {
             get => GetSettingValue("ThreadCount", "1");
@@ -1683,6 +1726,336 @@ namespace Test_Automation
                 return bool.TryParse(value, out var result) && result;
             }
             return defaultValue;
+        }
+
+        #endregion
+
+        #region File Properties
+
+        private static readonly string[] _fileOperationOptions = new[]
+        {
+            "Read", "Write", "Copy", "Move", "Delete", "List", 
+            "CreateFolder", "CreateFile", "ReadFiles"
+        };
+
+        private static readonly string[] _fileEncodingOptions = new[]
+        {
+            "UTF-8", "ASCII", "UTF-16", "Latin1"
+        };
+
+        private static readonly string[] _fileReadModeOptions = new[]
+        {
+            "All", "Selected"
+        };
+
+        private static readonly string[] _fileWriteModeOptions = new[]
+        {
+            "Overwrite", "Append"
+        };
+
+        public string[] FileOperationOptions => _fileOperationOptions;
+        public string[] FileEncodingOptions => _fileEncodingOptions;
+        public string[] FileReadModeOptions => _fileReadModeOptions;
+        public string[] FileWriteModeOptions => _fileWriteModeOptions;
+
+        public string FileOperation
+        {
+            get => GetSettingValue("Operation", "Read");
+            set
+            {
+                SetSettingValue("Operation", value);
+                OnPropertyChanged(nameof(FileOperation));
+                OnPropertyChanged(nameof(FileShowSourcePath));
+                OnPropertyChanged(nameof(FileShowDestinationPath));
+                OnPropertyChanged(nameof(FileShowContent));
+                OnPropertyChanged(nameof(FileShowEncoding));
+                OnPropertyChanged(nameof(FileShowOverwrite));
+                OnPropertyChanged(nameof(FileShowFileFilter));
+                OnPropertyChanged(nameof(FileShowOutputVariable));
+                OnPropertyChanged(nameof(FileShowRecursive));
+                OnPropertyChanged(nameof(FileShowIncludeMetadata));
+                OnPropertyChanged(nameof(FileShowSourceFileBrowse));
+                OnPropertyChanged(nameof(FileShowSourceFolderBrowse));
+                OnPropertyChanged(nameof(FileShowDestinationFileBrowse));
+                OnPropertyChanged(nameof(FileShowDestinationFolderBrowse));
+                OnPropertyChanged(nameof(FileShowDestinationFolder));
+                OnPropertyChanged(nameof(FileShowDestinationFileName));
+                OnPropertyChanged(nameof(FileShowAppend));
+                OnPropertyChanged(nameof(FileShowReadMode));
+                OnPropertyChanged(nameof(FileShowSelectedFilesBrowse));
+                OnPropertyChanged(nameof(FileShowWriteMode));
+            }
+        }
+
+        public string FileSourcePath
+        {
+            get => GetSettingValue("SourcePath", string.Empty);
+            set
+            {
+                SetSettingValue("SourcePath", value);
+                OnPropertyChanged(nameof(FileSourcePath));
+                OnPropertyChanged(nameof(FileSourcePathResolved));
+            }
+        }
+
+        public string FileSourcePathResolved => ResolveWithProjectVariables(FileSourcePath);
+
+        public string FileDestinationPath
+        {
+            get => GetSettingValue("DestinationPath", string.Empty);
+            set
+            {
+                SetSettingValue("DestinationPath", value);
+                OnPropertyChanged(nameof(FileDestinationPath));
+                OnPropertyChanged(nameof(FileDestinationPathResolved));
+            }
+        }
+
+        public string FileDestinationPathResolved => ResolveWithProjectVariables(FileDestinationPath);
+
+        public string FileContent
+        {
+            get => GetSettingValue("Content", string.Empty);
+            set
+            {
+                SetSettingValue("Content", value);
+                OnPropertyChanged(nameof(FileContent));
+            }
+        }
+
+        public string FileEncoding
+        {
+            get => GetSettingValue("Encoding", "UTF-8");
+            set
+            {
+                SetSettingValue("Encoding", value);
+                OnPropertyChanged(nameof(FileEncoding));
+            }
+        }
+
+        public bool FileOverwrite
+        {
+            get => GetSettingBoolValue("Overwrite", false);
+            set
+            {
+                SetSettingValue("Overwrite", value.ToString());
+                OnPropertyChanged(nameof(FileOverwrite));
+                if (value)
+                {
+                    // If Overwrite is set to true, set Append to false
+                    SetSettingValue("Append", "false");
+                    OnPropertyChanged(nameof(FileAppend));
+                }
+            }
+        }
+
+        public string FileFilter
+        {
+            get => GetSettingValue("FileFilter", "*.*");
+            set
+            {
+                SetSettingValue("FileFilter", value);
+                OnPropertyChanged(nameof(FileFilter));
+            }
+        }
+
+        public string FileOutputVariable
+        {
+            get => GetSettingValue("OutputVariable", string.Empty);
+            set
+            {
+                SetSettingValue("OutputVariable", value);
+                OnPropertyChanged(nameof(FileOutputVariable));
+            }
+        }
+
+        public bool FileRecursive
+        {
+            get => GetSettingBoolValue("Recursive", false);
+            set
+            {
+                SetSettingValue("Recursive", value.ToString());
+                OnPropertyChanged(nameof(FileRecursive));
+            }
+        }
+
+        public bool FileIncludeMetadata
+        {
+            get => GetSettingBoolValue("IncludeMetadata", false);
+            set
+            {
+                SetSettingValue("IncludeMetadata", value.ToString());
+                OnPropertyChanged(nameof(FileIncludeMetadata));
+            }
+        }
+
+        public string FileWriteMode
+        {
+            get => GetSettingValue("WriteMode", "Overwrite");
+            set
+            {
+                SetSettingValue("WriteMode", value);
+                OnPropertyChanged(nameof(FileWriteMode));
+            }
+        }
+
+        public string FileDestinationFolder
+        {
+            get => GetSettingValue("DestinationFolder", string.Empty);
+            set
+            {
+                SetSettingValue("DestinationFolder", value);
+                OnPropertyChanged(nameof(FileDestinationFolder));
+            }
+        }
+
+        public string FileDestinationFileName
+        {
+            get => GetSettingValue("DestinationFileName", string.Empty);
+            set
+            {
+                SetSettingValue("DestinationFileName", value);
+                OnPropertyChanged(nameof(FileDestinationFileName));
+            }
+        }
+
+        public bool FileAppend
+        {
+            get => GetSettingBoolValue("Append", false);
+            set
+            {
+                SetSettingValue("Append", value.ToString());
+                OnPropertyChanged(nameof(FileAppend));
+                if (value)
+                {
+                    // If Append is set to true, set Overwrite to false
+                    SetSettingValue("Overwrite", "false");
+                    OnPropertyChanged(nameof(FileOverwrite));
+                }
+            }
+        }
+
+        public string FileReadMode
+        {
+            get => GetSettingValue("ReadMode", "All");
+            set
+            {
+                SetSettingValue("ReadMode", value);
+                OnPropertyChanged(nameof(FileReadMode));
+                OnPropertyChanged(nameof(FileShowSelectedFilesBrowse));
+            }
+        }
+
+        public string FileSelectedFilePaths
+        {
+            get => GetSettingValue("SelectedFilePaths", "[]");
+            set
+            {
+                SetSettingValue("SelectedFilePaths", value);
+                OnPropertyChanged(nameof(FileSelectedFilePaths));
+            }
+        }
+
+        // Visibility properties based on selected operation
+        public bool FileShowSourcePath => 
+            string.Equals(FileOperation, "Read", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Write", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Copy", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Move", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Delete", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "List", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "CreateFolder", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "CreateFile", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "ReadFiles", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowDestinationPath => false; // Hidden, using DestinationFolder and DestinationFileName instead
+
+        public bool FileShowContent => 
+            string.Equals(FileOperation, "Write", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "CreateFile", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowEncoding => 
+            string.Equals(FileOperation, "Read", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Write", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "CreateFile", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "ReadFiles", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowOverwrite => 
+            string.Equals(FileOperation, "Write", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Copy", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Move", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "CreateFile", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowFileFilter => 
+            string.Equals(FileOperation, "List", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "ReadFiles", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowOutputVariable => 
+            string.Equals(FileOperation, "Read", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "List", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "ReadFiles", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowRecursive => 
+            string.Equals(FileOperation, "List", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "ReadFiles", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowIncludeMetadata => 
+            string.Equals(FileOperation, "Read", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "List", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "ReadFiles", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowWriteMode => 
+            string.Equals(FileOperation, "Write", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "CreateFile", StringComparison.OrdinalIgnoreCase);
+
+        // Browse button visibility
+        public bool FileShowSourceFileBrowse => 
+            string.Equals(FileOperation, "Read", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Write", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Copy", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Move", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Delete", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "CreateFile", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowSourceFolderBrowse => 
+            string.Equals(FileOperation, "List", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "CreateFolder", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "ReadFiles", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowDestinationFileBrowse => 
+            string.Equals(FileOperation, "Copy", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Move", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowDestinationFolderBrowse => false; // Not needed for now
+
+        public bool FileShowDestinationFolder => 
+            string.Equals(FileOperation, "Copy", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Move", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "CreateFile", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowDestinationFileName => 
+            string.Equals(FileOperation, "Copy", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "Move", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "CreateFile", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowAppend => 
+            string.Equals(FileOperation, "Write", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(FileOperation, "CreateFile", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowReadMode => 
+            string.Equals(FileOperation, "ReadFiles", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileShowSelectedFilesBrowse => 
+            string.Equals(FileOperation, "ReadFiles", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(FileReadMode, "Selected", StringComparison.OrdinalIgnoreCase);
+
+        public string FileResultPreview
+        {
+            get
+            {
+                // This could be populated after execution, for now return placeholder
+                return "Result will appear here after execution.";
+            }
         }
 
         #endregion
@@ -2082,6 +2455,7 @@ namespace Test_Automation
         private Point _dragStartPoint;
         private PlanNode? _draggedNode;
         private bool _isSyncingAssertionTreeSource;
+        private bool _isSyncingWhileConditionRows;
         private string _assertionTreeSource = "PreviewVariables";
 
         private sealed class AssertionTreeNodeTag
@@ -2094,7 +2468,7 @@ namespace Test_Automation
 
         private static readonly string[] StepTypes =
         {
-            "Http", "GraphQl", "Sql", "Dataset", "Assert", "VariableExtractor", "Script", "Timer", "RandomGenerator"
+            "Http", "GraphQl", "Sql", "Dataset", "Assert", "VariableExtractor", "Script", "Timer", "RandomGenerator", "While", "File"
         };
 
         public MainWindow()
@@ -2114,6 +2488,7 @@ namespace Test_Automation
             RebuildVariableUsageMap();
             RefreshJsonPreview();
             RefreshApiCatalogState();
+            WhileConditionRows.CollectionChanged += WhileConditionRows_CollectionChanged;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -3933,7 +4308,7 @@ namespace Test_Automation
                 return new[] { "Threads", "Config", "If", "Loop", "Foreach" }.Concat(StepTypes).ToArray();
             }
 
-            if (parentType == "Threads" || parentType == "If" || parentType == "Loop" || parentType == "Foreach")
+            if (parentType == "Threads" || parentType == "If" || parentType == "Loop" || parentType == "Foreach" || parentType == "While")
             {
                 return new[] { "Config", "If", "Loop", "Foreach" }.Concat(StepTypes).ToArray();
             }
@@ -4248,6 +4623,132 @@ namespace Test_Automation
         private void RefreshDatasetPreviewButton_Click(object sender, RoutedEventArgs e)
         {
             RefreshDatasetPreview();
+        }
+
+        private void BrowseFileSourceFileButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.Equals(SelectedNode?.Type, "File", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var dialog = new OpenFileDialog
+            {
+                Title = "Select Source File",
+                Filter = "All files (*.*)|*.*",
+                CheckFileExists = true
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            FileSourcePath = dialog.FileName;
+        }
+
+        private void BrowseFileSourceFolderButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.Equals(SelectedNode?.Type, "File", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            // Use OpenFileDialog to simulate folder selection
+            var dialog = new OpenFileDialog
+            {
+                Title = "Select Source Folder",
+                CheckFileExists = false,
+                ValidateNames = false,
+                FileName = "Folder Selection"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            // Extract directory path from selected "file"
+            var filePath = dialog.FileName;
+            var directoryPath = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(directoryPath))
+            {
+                FileSourcePath = directoryPath;
+            }
+        }
+
+        private void BrowseFileDestinationFileButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.Equals(SelectedNode?.Type, "File", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var dialog = new OpenFileDialog
+            {
+                Title = "Select Destination File",
+                Filter = "All files (*.*)|*.*",
+                CheckFileExists = false
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            FileDestinationPath = dialog.FileName;
+        }
+
+        private void BrowseFileDestinationFolderButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.Equals(SelectedNode?.Type, "File", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var dialog = new OpenFileDialog
+            {
+                Title = "Select Destination Folder",
+                CheckFileExists = false,
+                ValidateNames = false,
+                FileName = "Folder Selection"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            var filePath = dialog.FileName;
+            var directoryPath = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(directoryPath))
+            {
+                FileDestinationPath = directoryPath;
+            }
+        }
+
+        private void SelectFilesButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.Equals(SelectedNode?.Type, "File", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var dialog = new OpenFileDialog
+            {
+                Title = "Select Files",
+                Filter = "All files (*.*)|*.*",
+                Multiselect = true,
+                CheckFileExists = true
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            var selectedFiles = dialog.FileNames.ToList();
+            FileSelectedFilePaths = System.Text.Json.JsonSerializer.Serialize(selectedFiles);
         }
 
         private void RefreshDatasetPreview()
@@ -8430,6 +8931,122 @@ namespace Test_Automation
             OnPropertyChanged(nameof(RandomShowArrayOptions));
             OnPropertyChanged(nameof(RandomShowJsonOptions));
             OnPropertyChanged(nameof(RandomShowEmailOption));
+            OnPropertyChanged(nameof(IsFileSelected));
+            OnPropertyChanged(nameof(FileOperation));
+            OnPropertyChanged(nameof(FileSourcePath));
+            OnPropertyChanged(nameof(FileSourcePathResolved));
+            OnPropertyChanged(nameof(FileDestinationPath));
+            OnPropertyChanged(nameof(FileDestinationPathResolved));
+            OnPropertyChanged(nameof(FileContent));
+            OnPropertyChanged(nameof(FileEncoding));
+            OnPropertyChanged(nameof(FileOverwrite));
+            OnPropertyChanged(nameof(FileFilter));
+            OnPropertyChanged(nameof(FileOutputVariable));
+            OnPropertyChanged(nameof(FileRecursive));
+            OnPropertyChanged(nameof(FileIncludeMetadata));
+            OnPropertyChanged(nameof(FileShowSourcePath));
+            OnPropertyChanged(nameof(FileShowDestinationPath));
+            OnPropertyChanged(nameof(FileShowContent));
+            OnPropertyChanged(nameof(FileShowEncoding));
+            OnPropertyChanged(nameof(FileShowOverwrite));
+            OnPropertyChanged(nameof(FileShowFileFilter));
+            OnPropertyChanged(nameof(FileShowOutputVariable));
+            OnPropertyChanged(nameof(FileShowRecursive));
+            OnPropertyChanged(nameof(FileShowIncludeMetadata));
+            OnPropertyChanged(nameof(FileShowSourceFileBrowse));
+            OnPropertyChanged(nameof(FileShowSourceFolderBrowse));
+            OnPropertyChanged(nameof(FileShowDestinationFileBrowse));
+            OnPropertyChanged(nameof(FileShowDestinationFolderBrowse));
+            OnPropertyChanged(nameof(FileDestinationFolder));
+            OnPropertyChanged(nameof(FileDestinationFileName));
+            OnPropertyChanged(nameof(FileAppend));
+            OnPropertyChanged(nameof(FileReadMode));
+            OnPropertyChanged(nameof(FileSelectedFilePaths));
+            OnPropertyChanged(nameof(FileShowDestinationFolder));
+            OnPropertyChanged(nameof(FileShowDestinationFileName));
+            OnPropertyChanged(nameof(FileShowAppend));
+            OnPropertyChanged(nameof(FileShowReadMode));
+            OnPropertyChanged(nameof(FileShowSelectedFilesBrowse));
+            OnPropertyChanged(nameof(FileResultPreview));
+            OnPropertyChanged(nameof(IsWhileSelected));
+            OnPropertyChanged(nameof(WhileMaxIterations));
+            OnPropertyChanged(nameof(WhileTimeoutMs));
+            OnPropertyChanged(nameof(WhileEvaluationMode));
+            OnPropertyChanged(nameof(WhileConditionJson));
+            OnPropertyChanged(nameof(WhileEvaluationModeOptions));
+            if (SelectedNode?.Type == "While")
+            {
+                UpdateWhileConditionRowsFromJson();
+            }
+        }
+
+        private void WhileConditionRows_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            // Unsubscribe from old items
+            if (e.OldItems != null)
+            {
+                foreach (var item in e.OldItems)
+                {
+                    if (item is ConditionRow row)
+                        row.PropertyChanged -= WhileConditionRow_PropertyChanged;
+                }
+            }
+
+            // Subscribe to new items
+            if (e.NewItems != null)
+            {
+                foreach (var item in e.NewItems)
+                {
+                    if (item is ConditionRow row)
+                        row.PropertyChanged += WhileConditionRow_PropertyChanged;
+                }
+            }
+
+            if (_isSyncingWhileConditionRows) return;
+            UpdateWhileConditionJsonFromRows();
+        }
+
+        private void WhileConditionRow_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (_isSyncingWhileConditionRows) return;
+            UpdateWhileConditionJsonFromRows();
+        }
+
+        private void UpdateWhileConditionJsonFromRows()
+        {
+            if (SelectedNode?.Type != "While") return;
+            _isSyncingWhileConditionRows = true;
+            try
+            {
+                var json = JsonSerializer.Serialize(WhileConditionRows.ToList(), new JsonSerializerOptions { WriteIndented = true });
+                WhileConditionJson = json;
+            }
+            finally
+            {
+                _isSyncingWhileConditionRows = false;
+            }
+        }
+
+        private void UpdateWhileConditionRowsFromJson()
+        {
+            if (SelectedNode?.Type != "While") return;
+            var json = WhileConditionJson;
+            try
+            {
+                var rows = JsonSerializer.Deserialize<List<ConditionRow>>(json) ?? new List<ConditionRow>();
+                _isSyncingWhileConditionRows = true;
+                WhileConditionRows.Clear();
+                foreach (var row in rows)
+                {
+                    WhileConditionRows.Add(row);
+                }
+                _isSyncingWhileConditionRows = false;
+            }
+            catch
+            {
+                _isSyncingWhileConditionRows = false;
+                // ignore invalid JSON
+            }
         }
 
         private void RaiseHttpAuthVisibilityChanged()
@@ -8580,6 +9197,20 @@ namespace Test_Automation
 
             SelectedNode.Extractors.Remove(extractor);
             RefreshJsonPreview();
+        }
+
+        private void AddConditionRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SelectedNode?.Type != "While") return;
+            WhileConditionRows.Add(new ConditionRow());
+        }
+
+        private void RemoveConditionRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is ConditionRow row)
+            {
+                WhileConditionRows.Remove(row);
+            }
         }
 
         private void ExploreJsonPathButton_Click(object sender, RoutedEventArgs e)

@@ -448,6 +448,35 @@ namespace Test_Automation.Models
     }
 
     /// <summary>
+    /// File component preview data
+    /// </summary>
+    public class FilePreviewData : ComponentPreviewData
+    {
+        public override string PreviewType => "File";
+
+        [JsonPropertyName("operation")]
+        public string Operation { get; set; } = string.Empty;
+
+        [JsonPropertyName("sourcePath")]
+        public string SourcePath { get; set; } = string.Empty;
+
+        [JsonPropertyName("destinationPath")]
+        public string DestinationPath { get; set; } = string.Empty;
+
+        [JsonPropertyName("success")]
+        public bool Success { get; set; } = false;
+
+        [JsonPropertyName("errorMessage")]
+        public string ErrorMessage { get; set; } = string.Empty;
+
+        [JsonPropertyName("result")]
+        public string Result { get; set; } = string.Empty;
+
+        [JsonPropertyName("files")]
+        public List<string> Files { get; set; } = new List<string>();
+    }
+
+    /// <summary>
     /// Container for all preview data - used for JSON serialization
     /// </summary>
     public class PreviewContainer
