@@ -1250,8 +1250,8 @@
                                 <Button Grid.Column="2" Content="Refresh" Width="70" Click="RefreshExcelSheetNamesButton_Click" />
                             </Grid>
                             
-                            <!-- Operation -->
-                            <Grid Margin="0,0,0,6">
+                            <!-- Operation (only for existing file mode) -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelShowOperation, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
@@ -1260,54 +1260,39 @@
                                 <ComboBox Grid.Column="1" ItemsSource="{Binding ExcelOperationOptions}" SelectedItem="{Binding ExcelOperation, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
                             
-                            <!-- Column and Row -->
-                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelShowCellReference, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100" />
-                                    <ColumnDefinition Width="60" />
-                                    <ColumnDefinition Width="60" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Cell Reference" />
-                                <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding ExcelColumn, UpdateSourceTrigger=PropertyChanged}" ToolTip="Column letter (A) or number (1)" />
-                                <TextBox Grid.Column="2" Margin="0,0,6,0" Text="{Binding ExcelRow, UpdateSourceTrigger=PropertyChanged}" ToolTip="Row number" />
-                            </Grid>
-                            
-                            <!-- Value (for WriteCell) -->
-                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelShowValue, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Value" />
-                                <TextBox Grid.Column="1" Text="{Binding ExcelValue, UpdateSourceTrigger=PropertyChanged}" />
-                            </Grid>
-                            
-                            <!-- Values JSON (for WriteRange/AppendRow) -->
-                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelShowValuesJson, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Values (JSON)" />
-                                <TextBox Grid.Column="1" Text="{Binding ExcelValuesJson, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Height="100" ToolTip="JSON array of arrays, e.g. [[&quot;A&quot;,&quot;B&quot;],[1,2]]" />
-                            </Grid>
-                            
-                            <!-- Delete/Clear Range -->
-                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelShowDeleteRange, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100" />
-                                    <ColumnDefinition Width="60" />
-                                    <ColumnDefinition Width="60" />
-                                    <ColumnDefinition Width="60" />
-                                    <ColumnDefinition Width="60" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Range" />
-                                <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding ExcelDeleteStartColumn, UpdateSourceTrigger=PropertyChanged}" ToolTip="Start column" />
-                                <TextBox Grid.Column="2" Margin="0,0,6,0" Text="{Binding ExcelDeleteStartRow, UpdateSourceTrigger=PropertyChanged}" ToolTip="Start row" />
-                                <TextBox Grid.Column="3" Margin="0,0,6,0" Text="{Binding ExcelDeleteEndColumn, UpdateSourceTrigger=PropertyChanged}" ToolTip="End column" />
-                                <TextBox Grid.Column="4" Margin="0,0,6,0" Text="{Binding ExcelDeleteEndRow, UpdateSourceTrigger=PropertyChanged}" ToolTip="End row" />
+                            <!-- JSON Data Input (single text area for all operations) -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelShowJsonInput, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Text="Data (JSON)" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                <TextBox Grid.Row="1" 
+                                         Text="{Binding ExcelJsonData, UpdateSourceTrigger=PropertyChanged}" 
+                                         AcceptsReturn="True" 
+                                         TextWrapping="Wrap" 
+                                         VerticalScrollBarVisibility="Auto" 
+                                         MinHeight="120" 
+                                         FontFamily="Consolas"
+                                         FontSize="11"
+                                         ToolTip="{Binding ExcelJsonToolTip}" />
+                                <Expander Grid.Row="2" Header="Show examples (click to copy)" IsExpanded="False" Margin="0,4,0,0">
+                                    <Border Background="#F5F5F5" Padding="8" CornerRadius="3" Margin="0,4,0,0">
+                                        <StackPanel>
+                                            <TextBox TextWrapping="Wrap" FontFamily="Consolas" FontSize="10" 
+                                                     IsReadOnly="True" 
+                                                     BorderThickness="0"
+                                                     Background="Transparent"
+                                                     Text="{Binding ExcelExamplesTextValue, Mode=OneWay}"
+                                                     ToolTip="Select and copy text, or click Copy button below" />
+                                            <Button Content="Copy to clipboard" 
+                                                    HorizontalAlignment="Right" 
+                                                    Margin="0,4,0,0"
+                                                    Click="CopyExcelExamples_Click" />
+                                        </StackPanel>
+                                    </Border>
+                                </Expander>
                             </Grid>
                             
                             <!-- Help Button -->

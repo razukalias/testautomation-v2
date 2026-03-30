@@ -403,6 +403,13 @@ public class VariableExtractorData : ComponentData
         [JsonPropertyName("sheetName")]
         public string SheetName { get; set; } = string.Empty;
 
+        [JsonPropertyName("selectedSheet")]
+        public string SelectedSheet { get; set; } = string.Empty;
+
+        [JsonPropertyName("jsonData")]
+        public string JsonData { get; set; } = string.Empty;
+
+        // Legacy properties - kept for backward compatibility
         [JsonPropertyName("column")]
         public string Column { get; set; } = string.Empty;
 
@@ -413,7 +420,7 @@ public class VariableExtractorData : ComponentData
         public string Value { get; set; } = string.Empty;
 
         [JsonPropertyName("values")]
-        public string Values { get; set; } = string.Empty; // JSON array for range operations
+        public string Values { get; set; } = string.Empty;
 
         [JsonPropertyName("deleteStartColumn")]
         public string DeleteStartColumn { get; set; } = string.Empty;

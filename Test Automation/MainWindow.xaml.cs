@@ -131,9 +131,8 @@ namespace Test_Automation
 
         public ObservableCollection<string> ExcelOperationOptions { get; } = new ObservableCollection<string>
         {
-            "WriteCell",
-            "WriteRange",
-            "AppendRow",
+            "Write",
+            "Append",
             "CreateSheet",
             "DeleteRows",
             "DeleteColumns",
@@ -1551,6 +1550,8 @@ namespace Test_Automation
                 OnPropertyChanged(nameof(ExcelFileModeExisting));
                 OnPropertyChanged(nameof(ExcelShowSheetName));
                 OnPropertyChanged(nameof(ExcelShowSheetDropdown));
+                OnPropertyChanged(nameof(ExcelJsonToolTip));
+                UpdateExcelExamples();
             }
         }
 
@@ -1566,6 +1567,8 @@ namespace Test_Automation
                 OnPropertyChanged(nameof(ExcelFileModeExisting));
                 OnPropertyChanged(nameof(ExcelShowSheetName));
                 OnPropertyChanged(nameof(ExcelShowSheetDropdown));
+                OnPropertyChanged(nameof(ExcelJsonToolTip));
+                UpdateExcelExamples();
             }
         }
 
@@ -1642,18 +1645,16 @@ namespace Test_Automation
         public string ExcelOperation
         {
             get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
-                ? GetSettingValue("Operation", "WriteCell")
-                : "WriteCell";
+                ? GetSettingValue("Operation", "Write")
+                : "Write";
             set
             {
                 if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
                     return;
                 SetSettingValue("Operation", value);
                 OnPropertyChanged(nameof(ExcelOperation));
-                OnPropertyChanged(nameof(ExcelShowCellReference));
-                OnPropertyChanged(nameof(ExcelShowValue));
-                OnPropertyChanged(nameof(ExcelShowValuesJson));
-                OnPropertyChanged(nameof(ExcelShowDeleteRange));
+                OnPropertyChanged(nameof(ExcelJsonToolTip));
+                UpdateExcelExamples();
             }
         }
 
@@ -1769,23 +1770,60 @@ namespace Test_Automation
             }
         }
 
-        // Visibility helpers
+        public string ExcelJsonData
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("JsonData", string.Empty)
+                : string.Empty;
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("JsonData", value);
+                OnPropertyChanged(nameof(ExcelJsonData));
+            }
+        }
+
+        private string _excelExamplesTextValue = string.Empty;
+        public string ExcelExamplesTextValue
+        {
+            get => _excelExamplesTextValue;
+            set
+            {
+                _excelExamplesTextValue = value;
+                OnPropertyChanged(nameof(ExcelExamplesTextValue));
+            }
+        }
+
+        // Visibility helpers - simplified for new JSON-based UI
         public bool ExcelShowSheetName => ExcelFileModeNew && string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase);
         public bool ExcelShowSheetDropdown => ExcelFileModeExisting && string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase);
-        public bool ExcelShowCellReference => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase) &&
-            (string.Equals(ExcelOperation, "WriteCell", StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(ExcelOperation, "WriteRange", StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(ExcelOperation, "AppendRow", StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(ExcelOperation, "ClearCells", StringComparison.OrdinalIgnoreCase));
-        public bool ExcelShowValue => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(ExcelOperation, "WriteCell", StringComparison.OrdinalIgnoreCase);
-        public bool ExcelShowValuesJson => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase) &&
-            (string.Equals(ExcelOperation, "WriteRange", StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(ExcelOperation, "AppendRow", StringComparison.OrdinalIgnoreCase));
-        public bool ExcelShowDeleteRange => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase) &&
-            (string.Equals(ExcelOperation, "DeleteRows", StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(ExcelOperation, "DeleteColumns", StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(ExcelOperation, "ClearCells", StringComparison.OrdinalIgnoreCase));
+        public bool ExcelShowOperation => ExcelFileModeExisting && string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase);
+        public bool ExcelShowJsonInput => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase);
+        
+        public string ExcelJsonToolTip
+        {
+            get
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return string.Empty;
+                    
+                if (ExcelFileModeNew)
+                    return "Enter JSON with 'sheets' array. Each sheet has 'name', optional 'headers', and 'rows' array.";
+                
+                var op = ExcelOperation?.ToLowerInvariant() ?? "write";
+                return op switch
+                {
+                    "write" => "Write: use 'startCell' and 'values' array. For append mode, use 'mode':'append' with 'startColumn'.",
+                    "append" => "Append: use 'startColumn' and 'values' array. Data is added after the last row.",
+                    "deleterows" => "Delete rows: use 'startRow' and 'endRow'. Rows are removed and shifted up.",
+                    "deletecolumns" => "Delete columns: use 'startColumn' and 'endColumn'. Columns are removed and shifted left.",
+                    "clearcells" => "Clear cells: use 'startCell' and 'endCell'. Content is cleared but rows/columns remain.",
+                    "createsheet" => "Create sheet: use 'name' for the new sheet.",
+                    _ => "Enter JSON data for the selected operation"
+                };
+            }
+        }
 
         // Helper to load sheet names from file
         public void RefreshExcelSheetNames()
@@ -1809,6 +1847,106 @@ namespace Test_Automation
             catch (Exception)
             {
                 // ignore errors
+            }
+        }
+
+        // Update examples text in the expander
+        public void UpdateExcelExamples()
+        {
+            string examples;
+            
+            if (ExcelFileModeNew)
+            {
+                examples = "{" + "\n" +
+                    "  \"sheets\": [" + "\n" +
+                    "    {" + "\n" +
+                    "      \"name\": \"Sheet1\"," + "\n" +
+                    "      \"headers\": [\"Name\", \"Age\", \"City\"]," + "\n" +
+                    "      \"rows\": [" + "\n" +
+                    "        [\"John\", \"30\", \"New York\"]," + "\n" +
+                    "        [\"Jane\", \"25\", \"Los Angeles\"]," + "\n" +
+                    "        [\"Bob\", \"35\", \"Chicago\"]" + "\n" +
+                    "      ]" + "\n" +
+                    "    }," + "\n" +
+                    "    {" + "\n" +
+                    "      \"name\": \"Sheet2\"," + "\n" +
+                    "      \"headers\": [\"Product\", \"Price\", \"Stock\"]," + "\n" +
+                    "      \"rows\": [" + "\n" +
+                    "        [\"Laptop\", \"999\", \"50\"]," + "\n" +
+                    "        [\"Mouse\", \"25\", \"200\"]," + "\n" +
+                    "        [\"Keyboard\", \"75\", \"100\"]" + "\n" +
+                    "      ]" + "\n" +
+                    "    }" + "\n" +
+                    "  ]" + "\n" +
+                    "}";
+            }
+            else
+            {
+                var op = ExcelOperation?.ToLowerInvariant() ?? "write";
+                examples = op switch
+                {
+                    "write" => "{" + "\n" +
+                        "  \"startCell\": \"A1\"," + "\n" +
+                        "  \"values\": [" + "\n" +
+                        "    [\"Name\", \"Age\", \"City\"]," + "\n" +
+                        "    [\"John\", \"30\", \"New York\"]," + "\n" +
+                        "    [\"Jane\", \"25\", \"Los Angeles\"]," + "\n" +
+                        "    [\"Bob\", \"35\", \"Chicago\"]" + "\n" +
+                        "  ]" + "\n" +
+                        "}" + "\n\n" +
+                        "// Or use append mode:" + "\n" +
+                        "{" + "\n" +
+                        "  \"mode\": \"append\"," + "\n" +
+                        "  \"startColumn\": \"A\"," + "\n" +
+                        "  \"values\": [[" + "\n" +
+                        "    \"David\", \"28\", \"Boston\"" + "\n" +
+                        "  ]]" + "\n" +
+                        "}",
+                    "append" => "{" + "\n" +
+                        "  \"startColumn\": \"A\"," + "\n" +
+                        "  \"values\": [" + "\n" +
+                        "    [\"David\", \"28\", \"Boston\"]," + "\n" +
+                        "    [\"Emily\", \"32\", \"Seattle\"]" + "\n" +
+                        "  ]" + "\n" +
+                        "}",
+                    "deleterows" => "{" + "\n" +
+                        "  \"startRow\": 2," + "\n" +
+                        "  \"endRow\": 5" + "\n" +
+                        "}",
+                    "deletecolumns" => "{" + "\n" +
+                        "  \"startColumn\": \"B\"," + "\n" +
+                        "  \"endColumn\": \"D\"" + "\n" +
+                        "}",
+                    "clearcells" => "{" + "\n" +
+                        "  \"startCell\": \"A1\"," + "\n" +
+                        "  \"endCell\": \"C10\"" + "\n" +
+                        "}",
+                    "createsheet" => "{" + "\n" +
+                        "  \"name\": \"NewSheet\"" + "\n" +
+                        "}",
+                    _ => ""
+                };
+            }
+            
+            ExcelExamplesTextValue = examples;
+        }
+
+        private void CopyExcelExamples_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(ExcelExamplesTextValue))
+            {
+                Clipboard.SetText(ExcelExamplesTextValue);
+                // Optional: Show a brief notification
+                if (sender is Button btn)
+                {
+                    var originalContent = btn.Content;
+                    btn.Content = "Copied!";
+                    btn.Dispatcher.InvokeAsync(async () =>
+                    {
+                        await Task.Delay(1500);
+                        btn.Content = originalContent;
+                    });
+                }
             }
         }
 
@@ -9616,15 +9754,16 @@ Tips:
             OnPropertyChanged(nameof(ExcelDeleteStartRow));
             OnPropertyChanged(nameof(ExcelDeleteEndColumn));
             OnPropertyChanged(nameof(ExcelDeleteEndRow));
+            OnPropertyChanged(nameof(ExcelJsonData));
+            OnPropertyChanged(nameof(ExcelJsonToolTip));
             OnPropertyChanged(nameof(ExcelShowSheetName));
             OnPropertyChanged(nameof(ExcelShowSheetDropdown));
-            OnPropertyChanged(nameof(ExcelShowCellReference));
-            OnPropertyChanged(nameof(ExcelShowValue));
-            OnPropertyChanged(nameof(ExcelShowValuesJson));
-            OnPropertyChanged(nameof(ExcelShowDeleteRange));
+            OnPropertyChanged(nameof(ExcelShowOperation));
+            OnPropertyChanged(nameof(ExcelShowJsonInput));
             if (IsExcelSelected)
             {
                 RefreshExcelSheetNames();
+                UpdateExcelExamples();
             }
             OnPropertyChanged(nameof(IsWhileSelected));
             OnPropertyChanged(nameof(WhileMaxIterations));
