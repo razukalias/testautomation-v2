@@ -1583,8 +1583,12 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Source Variable" />
-                                <TextBox Grid.Column="1" Text="{Binding ForeachSourceVariable, UpdateSourceTrigger=PropertyChanged}"
-                                         ToolTip="Variable name holding a collection (array, JSON array, or comma-separated string). Each iteration exposes CurrentItem and CurrentIndex." />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding AvailableVariablesForExtractor}"
+                                          IsEditable="True"
+                                          IsTextSearchEnabled="True"
+                                          Text="{Binding ForeachSourceVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          ToolTip="Variable name holding a collection (array, JSON array, or comma-separated string). Each iteration exposes CurrentItem and CurrentIndex." />
                             </Grid>
                             <Grid >
                                 <Grid.ColumnDefinitions>
@@ -1592,8 +1596,12 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output Variable" />
-                                <TextBox Grid.Column="1" Text="{Binding ForeachOutputVariable, UpdateSourceTrigger=PropertyChanged}"
-                                         ToolTip="Optional variable name that stores the current item for use by child components (defaults to CurrentItem)." />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding AvailableVariablesForExtractor}"
+                                          IsEditable="True"
+                                          IsTextSearchEnabled="True"
+                                          Text="{Binding ForeachOutputVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          ToolTip="Optional variable name that stores the current item for use by child components (defaults to CurrentItem)." />
                             </Grid>
                             
                             <!-- View Assertions Button for Foreach -->
