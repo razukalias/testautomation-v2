@@ -1963,6 +1963,93 @@
                     </Border>
 
                         <Border  BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                            Visibility="{Binding IsBase64Selected, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="Base64" FontWeight="SemiBold" Margin="0,0,0,6" />
+                            
+                            <!-- Operation -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Operation" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding Base64OperationOptions}"
+                                          SelectedItem="{Binding Base64Operation, UpdateSourceTrigger=PropertyChanged}"
+                                          ToolTip="Encode or Decode" />
+                            </Grid>
+                            
+                            <!-- Data Type -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Data Type" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding Base64DataTypeOptions}"
+                                          SelectedItem="{Binding Base64DataType, UpdateSourceTrigger=PropertyChanged}"
+                                          ToolTip="Text or Binary data" />
+                            </Grid>
+                            
+                            <!-- Encoding -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Encoding" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding Base64EncodingOptions}"
+                                          SelectedItem="{Binding Base64Encoding, UpdateSourceTrigger=PropertyChanged}"
+                                          ToolTip="Text encoding (for text mode)" />
+                            </Grid>
+                            
+                            <!-- Input -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Top" Text="Input" Margin="0,2,0,0" />
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding Base64Input, UpdateSourceTrigger=PropertyChanged}"
+                                         AcceptsReturn="True"
+                                         Height="80"
+                                         VerticalScrollBarVisibility="Auto"
+                                         TextWrapping="Wrap"
+                                         ToolTip="Text to encode/decode or byte array string (e.g., [10,100,200])" />
+                            </Grid>
+                            
+                            <!-- File Path -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="File Path" />
+                                <TextBox Grid.Column="1" Text="{Binding Base64FilePath, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Optional: Read input from file (overrides Input field)" />
+                            </Grid>
+                            
+                            <!-- Output Variable -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output Variable" />
+                                <TextBox Grid.Column="1" Text="{Binding Base64OutputVariable, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Optional: Store result in this variable" />
+                            </Grid>
+                            
+                            <TextBlock Text="For binary encode, Input should be a byte array string like [10,100,200]. For binary decode, output will be a byte array string." 
+                                       FontStyle="Italic" TextWrapping="Wrap" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                        <Border  BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
                             Visibility="{Binding IsWhileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="While" FontWeight="SemiBold" Margin="0,0,0,6" />

@@ -439,4 +439,37 @@ public class VariableExtractorData : ComponentData
         [JsonPropertyName("sheetNames")]
         public List<string> SheetNames { get; set; } = new List<string>();
     }
+
+    /// <summary>
+    /// Base64 component model
+    /// </summary>
+    public class Base64Data : ComponentData
+    {
+        [JsonPropertyName("input")]
+        public string Input { get; set; } = string.Empty;
+
+        [JsonPropertyName("output")]
+        public string Output { get; set; } = string.Empty;
+
+        [JsonPropertyName("operation")]
+        public string Operation { get; set; } = "Encode";
+
+        [JsonPropertyName("dataType")]
+        public string DataType { get; set; } = "Text";
+
+        [JsonPropertyName("filePath")]
+        public string FilePath { get; set; } = string.Empty;
+
+        [JsonPropertyName("encoding")]
+        public string Encoding { get; set; } = "UTF-8";
+
+        [JsonPropertyName("outputVariable")]
+        public string OutputVariable { get; set; } = string.Empty;
+
+        [JsonPropertyName("success")]
+        public bool Success { get; set; } = false;
+
+        [JsonPropertyName("errorMessage")]
+        public string ErrorMessage { get; set; } = string.Empty;
+    }
 }

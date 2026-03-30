@@ -29,6 +29,7 @@ namespace Test_Automation.Factories
                 "script" => new Script(),
                 "randomgenerator" => new RandomGenerator(),
                 "random" => new RandomGenerator(),
+                "base64" => new Base64(),
                 "file" => new FileComponent(),
                 "excel" => new Excel(),
                 _ => throw new ArgumentException($"Unknown component type: {componentType}")

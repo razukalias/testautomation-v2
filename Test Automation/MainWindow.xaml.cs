@@ -631,6 +631,7 @@ namespace Test_Automation
         public bool IsVariableExtractorSelected => SelectedNode?.Type == "VariableExtractor";
         public bool IsScriptSelected => SelectedNode?.Type == "Script";
         public bool IsRandomGeneratorSelected => SelectedNode?.Type == "RandomGenerator";
+        public bool IsBase64Selected => SelectedNode?.Type == "Base64";
         public bool IsWhileSelected => SelectedNode?.Type == "While";
         public bool IsFileSelected => SelectedNode?.Type == "File";
         public bool IsExcelSelected => SelectedNode?.Type == "Excel";
@@ -2023,6 +2024,54 @@ namespace Test_Automation
 
         #endregion
 
+        #region Base64 Properties
+
+        private static readonly string[] _base64OperationOptions = new[] { "Encode", "Decode" };
+        private static readonly string[] _base64DataTypeOptions = new[] { "Text", "Binary" };
+        private static readonly string[] _base64EncodingOptions = new[] { "UTF-8", "ASCII", "UTF-16", "Latin1" };
+
+        public string[] Base64OperationOptions => _base64OperationOptions;
+        public string[] Base64DataTypeOptions => _base64DataTypeOptions;
+        public string[] Base64EncodingOptions => _base64EncodingOptions;
+
+        public string Base64Input
+        {
+            get => GetSettingValue("Input", "");
+            set => SetSettingValue("Input", value);
+        }
+
+        public string Base64Operation
+        {
+            get => GetSettingValue("Operation", "Encode");
+            set => SetSettingValue("Operation", value);
+        }
+
+        public string Base64DataType
+        {
+            get => GetSettingValue("DataType", "Text");
+            set => SetSettingValue("DataType", value);
+        }
+
+        public string Base64FilePath
+        {
+            get => GetSettingValue("FilePath", "");
+            set => SetSettingValue("FilePath", value);
+        }
+
+        public string Base64Encoding
+        {
+            get => GetSettingValue("Encoding", "UTF-8");
+            set => SetSettingValue("Encoding", value);
+        }
+
+        public string Base64OutputVariable
+        {
+            get => GetSettingValue("OutputVariable", "");
+            set => SetSettingValue("OutputVariable", value);
+        }
+
+        #endregion
+
         #region File Properties
 
         private static readonly string[] _fileOperationOptions = new[]
@@ -2761,7 +2810,7 @@ namespace Test_Automation
 
         private static readonly string[] StepTypes =
         {
-            "Http", "GraphQl", "Sql", "Dataset", "Assert", "VariableExtractor", "Script", "Timer", "RandomGenerator", "While", "File", "Excel"
+            "Http", "GraphQl", "Sql", "Dataset", "Assert", "VariableExtractor", "Script", "Timer", "RandomGenerator", "Base64", "While", "File", "Excel"
         };
 
         public MainWindow()
@@ -9283,6 +9332,7 @@ Tips:
             OnPropertyChanged(nameof(ScriptLanguage));
             OnPropertyChanged(nameof(ScriptCode));
             OnPropertyChanged(nameof(IsRandomGeneratorSelected));
+            OnPropertyChanged(nameof(IsBase64Selected));
             OnPropertyChanged(nameof(RandomOutputType));
             OnPropertyChanged(nameof(RandomMin));
             OnPropertyChanged(nameof(RandomMax));
@@ -9301,6 +9351,12 @@ Tips:
             OnPropertyChanged(nameof(RandomShowArrayOptions));
             OnPropertyChanged(nameof(RandomShowJsonOptions));
             OnPropertyChanged(nameof(RandomShowEmailOption));
+            OnPropertyChanged(nameof(Base64Input));
+            OnPropertyChanged(nameof(Base64Operation));
+            OnPropertyChanged(nameof(Base64DataType));
+            OnPropertyChanged(nameof(Base64FilePath));
+            OnPropertyChanged(nameof(Base64Encoding));
+            OnPropertyChanged(nameof(Base64OutputVariable));
             OnPropertyChanged(nameof(IsFileSelected));
             OnPropertyChanged(nameof(FileOperation));
             OnPropertyChanged(nameof(FileSourcePath));
