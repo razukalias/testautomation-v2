@@ -645,6 +645,13 @@ namespace Test_Automation.Services
                 TraceLog(threads, result, $"[THREAD-{threadIndex}] Final local variables ({localVars.Count}): [{string.Join(", ", localVars.Select(kv => $"{kv.Key}={TruncateForLogging(kv.Value, 30)}").Take(5))}]", TraceLevel.Verbose);
             }
 
+            // Merge thread-local variables back to parent context so they are visible to subsequent components
+            TraceLog(threads, result, $"[ComponentExecutor] Merging thread-local variables to parent context", TraceLevel.Info);
+            foreach (var (threadIndex, threadContext) in threadContexts)
+            {
+                threadContext.MergeThreadLocalVariables();
+            }
+
             // Re-apply variable extractors after threads complete so they capture final state
             // Note: Extractors run on the parent context, not thread-local contexts
             if (threads.Extractors != null && threads.Extractors.Count > 0)

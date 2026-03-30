@@ -20,7 +20,7 @@ namespace Test_Automation.Componentes
             public string SourcePath { get; set; } = string.Empty;
             public string SheetName { get; set; } = string.Empty;
             public string CsvDelimiter { get; set; } = ",";
-            public bool CsvHasHeader { get; set; } = true;
+            public bool HasHeader { get; set; } = true;
             public string JsonArrayPath { get; set; } = string.Empty;
             public string XmlRowPath { get; set; } = string.Empty;
             public int MaxRows { get; set; }
@@ -47,6 +47,15 @@ namespace Test_Automation.Componentes
 
             data.Properties["format"] = normalized.Format;
             data.Properties["rowCount"] = rows.Count;
+
+            // Store result in output variable if specified
+            var outputVariable = TryGet(Settings, "OutputVariable", string.Empty);
+            if (!string.IsNullOrWhiteSpace(outputVariable))
+            {
+                var jsonData = JsonSerializer.Serialize(rows);
+                context.SetVariable(outputVariable, jsonData);
+            }
+
             return Task.FromResult<ComponentData>(data);
         }
 
@@ -83,13 +92,16 @@ namespace Test_Automation.Componentes
 
         private static DatasetSettings NormalizeSettings(Dictionary<string, string> settings)
         {
+            // Check both HasHeader (new) and CsvHasHeader (legacy) for backward compatibility
+            var hasHeaderStr = TryGet(settings, "HasHeader", TryGet(settings, "CsvHasHeader", "true"));
+            
             var normalized = new DatasetSettings
             {
                 Format = TryGet(settings, "Format", "Auto"),
                 SourcePath = TryGet(settings, "SourcePath", TryGet(settings, "DataSource", string.Empty)),
                 SheetName = TryGet(settings, "SheetName", string.Empty),
                 CsvDelimiter = TryGet(settings, "CsvDelimiter", ","),
-                CsvHasHeader = bool.TryParse(TryGet(settings, "CsvHasHeader", "true"), out var hasHeader) ? hasHeader : true,
+                HasHeader = bool.TryParse(hasHeaderStr, out var hasHeader) ? hasHeader : true,
                 JsonArrayPath = TryGet(settings, "JsonArrayPath", string.Empty),
                 XmlRowPath = TryGet(settings, "XmlRowPath", string.Empty),
                 MaxRows = int.TryParse(TryGet(settings, "MaxRows", "0"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var maxRows)
@@ -161,15 +173,33 @@ namespace Test_Automation.Componentes
             var firstColumn = range.RangeAddress.FirstAddress.ColumnNumber;
             var lastColumn = range.RangeAddress.LastAddress.ColumnNumber;
 
-            var headers = new List<string>();
-            for (var column = firstColumn; column <= lastColumn; column++)
+            List<string> headers;
+            int dataStartRow;
+
+            if (settings.HasHeader)
             {
-                var headerValue = worksheet.Cell(firstRow, column).GetValue<string>()?.Trim();
-                headers.Add(string.IsNullOrWhiteSpace(headerValue) ? $"Column{column - firstColumn + 1}" : headerValue);
+                // Use first row as headers
+                headers = new List<string>();
+                for (var column = firstColumn; column <= lastColumn; column++)
+                {
+                    var headerValue = worksheet.Cell(firstRow, column).GetValue<string>()?.Trim();
+                    headers.Add(string.IsNullOrWhiteSpace(headerValue) ? GetColumnLetter(column - firstColumn + 1) : headerValue);
+                }
+                dataStartRow = firstRow + 1;
+            }
+            else
+            {
+                // Use A, B, C... as headers, start reading data from first row
+                headers = new List<string>();
+                for (var column = firstColumn; column <= lastColumn; column++)
+                {
+                    headers.Add(GetColumnLetter(column - firstColumn + 1));
+                }
+                dataStartRow = firstRow;
             }
 
             var rows = new List<Dictionary<string, object>>();
-            for (var row = firstRow + 1; row <= lastRow; row++)
+            for (var row = dataStartRow; row <= lastRow; row++)
             {
                 var dataRow = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                 var hasAny = false;
@@ -231,7 +261,9 @@ namespace Test_Automation.Componentes
             parser.SetDelimiters(settings.CsvDelimiter);
 
             string[]? headers = null;
-            if (settings.CsvHasHeader && !parser.EndOfData)
+            var dataStartsWithHeader = settings.HasHeader;
+            
+            if (dataStartsWithHeader && !parser.EndOfData)
             {
                 headers = parser.ReadFields();
             }
@@ -246,15 +278,16 @@ namespace Test_Automation.Componentes
 
                 if (headers == null)
                 {
+                    // Use A, B, C... as default column headers
                     headers = Enumerable.Range(1, fields.Length)
-                        .Select(index => $"Column{index}")
+                        .Select(index => GetColumnLetter(index))
                         .ToArray();
                 }
 
                 var row = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                 for (var i = 0; i < headers.Length; i++)
                 {
-                    var key = string.IsNullOrWhiteSpace(headers[i]) ? $"Column{i + 1}" : headers[i];
+                    var key = string.IsNullOrWhiteSpace(headers[i]) ? GetColumnLetter(i + 1) : headers[i];
                     var value = i < fields.Length ? fields[i] : string.Empty;
                     row[key] = value ?? string.Empty;
                 }
@@ -478,6 +511,21 @@ namespace Test_Automation.Componentes
                     FlattenXmlElement(child, childKey, row);
                 }
             }
+        }
+
+        /// <summary>
+        /// Converts a 1-based column index to Excel-style column letter (1=A, 2=B, ..., 27=AA, etc.)
+        /// </summary>
+        private static string GetColumnLetter(int columnIndex)
+        {
+            var result = string.Empty;
+            while (columnIndex > 0)
+            {
+                var remainder = (columnIndex - 1) % 26;
+                result = (char)('A' + remainder) + result;
+                columnIndex = (columnIndex - 1) / 26;
+            }
+            return result;
         }
     }
 }

@@ -1077,9 +1077,29 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Sheet (Excel)" />
-                                <TextBox Grid.Column="1" Text="{Binding DatasetSheetName, UpdateSourceTrigger=PropertyChanged}" />
+                                <ComboBox Grid.Column="1" 
+                                          ItemsSource="{Binding DatasetSheetNames}" 
+                                          Text="{Binding DatasetSheetName, UpdateSourceTrigger=PropertyChanged}"
+                                          Margin="0,0,6,0"/>
+                                <Button Grid.Column="2" Content="Refresh" Width="70" Click="RefreshDatasetSheetNamesButton_Click" />
+                                <Grid.Visibility>
+                                    <Binding Path="IsDatasetExcel" Converter="{StaticResource BoolToVisibilityConverter}" />
+                                </Grid.Visibility>
+                            </Grid>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output Variable" />
+                                <ComboBox Grid.Column="1" 
+                                          ItemsSource="{Binding AvailableVariablesForExtractor}"
+                                          IsEditable="True"
+                                          IsTextSearchEnabled="True"
+                                          Text="{Binding DatasetOutputVariable, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
                             <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
@@ -1091,7 +1111,21 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="CSV" />
                                 <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding DatasetCsvDelimiter, UpdateSourceTrigger=PropertyChanged}" ToolTip="Delimiter, e.g. , or ; or |" />
                                 <CheckBox Grid.Column="2" VerticalAlignment="Center" Content="Has Header"
-                                          IsChecked="{Binding DatasetCsvHasHeader, UpdateSourceTrigger=PropertyChanged}" />
+                                          IsChecked="{Binding DatasetHasHeader, UpdateSourceTrigger=PropertyChanged}" ToolTip="When checked, first row is treated as headers. When unchecked, A,B,C... column names are used." />
+                                <Grid.Visibility>
+                                    <Binding Path="IsDatasetCsv" Converter="{StaticResource BoolToVisibilityConverter}" />
+                                </Grid.Visibility>
+                            </Grid>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Has Header" />
+                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="First row contains column names" Foreground="#4F5D6B" />
+                                <CheckBox Grid.Column="2" VerticalAlignment="Center"
+                                          IsChecked="{Binding DatasetHasHeader, UpdateSourceTrigger=PropertyChanged}" ToolTip="When checked, first row is treated as headers. When unchecked, A,B,C... column names are used." />
                             </Grid>
                             <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
@@ -1100,6 +1134,9 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="JSON Path" />
                                 <TextBox Grid.Column="1" Text="{Binding DatasetJsonArrayPath, UpdateSourceTrigger=PropertyChanged}" ToolTip="Optional path to array, e.g. data.items" />
+                                <Grid.Visibility>
+                                    <Binding Path="IsDatasetJson" Converter="{StaticResource BoolToVisibilityConverter}" />
+                                </Grid.Visibility>
                             </Grid>
                             <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
@@ -1108,6 +1145,9 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="XML Row Path" />
                                 <TextBox Grid.Column="1" Text="{Binding DatasetXmlRowPath, UpdateSourceTrigger=PropertyChanged}" ToolTip="Optional row path, e.g. root/items/item" />
+                                <Grid.Visibility>
+                                    <Binding Path="IsDatasetXml" Converter="{StaticResource BoolToVisibilityConverter}" />
+                                </Grid.Visibility>
                             </Grid>
                             <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>

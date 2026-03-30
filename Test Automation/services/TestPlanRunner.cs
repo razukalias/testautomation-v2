@@ -43,6 +43,9 @@ namespace Test_Automation.Services
                 // Execute the test plan and its children (Threads)
                 await _executor.ExecuteComponentTree(testPlan, context);
 
+                // Merge thread-local variables back to parent context
+                context.MergeThreadLocalVariables();
+
                 // Calculate summary
                 summary.TotalComponents = context.Results.Count;
                 summary.PassedComponents = context.Results.Count(r => r.Passed);
@@ -57,6 +60,7 @@ namespace Test_Automation.Services
             }
             catch (OperationCanceledException)
             {
+                context.MergeThreadLocalVariables();
                 context.Status = "stopped";
                 context.IsRunning = false;
                 context.EndTime = DateTime.UtcNow;
@@ -69,6 +73,7 @@ namespace Test_Automation.Services
             }
             catch (Exception)
             {
+                context.MergeThreadLocalVariables();
                 context.Status = "failed";
                 context.IsRunning = false;
                 context.EndTime = DateTime.UtcNow;
@@ -95,6 +100,9 @@ namespace Test_Automation.Services
             {
                 await _executor.ExecuteComponentTree(testPlan, context);
 
+                // Merge thread-local variables back to parent context
+                context.MergeThreadLocalVariables();
+
                 summary.TotalComponents = context.Results.Count;
                 summary.PassedComponents = context.Results.Count(r => r.Passed);
                 summary.FailedComponents = context.Results.Count(r => !r.Passed);
@@ -104,9 +112,11 @@ namespace Test_Automation.Services
                 context.Status = summary.Status;
                 context.IsRunning = false;
                 context.EndTime = summary.EndTime;
+                context.SaveVariablesForUi();
             }
             catch (OperationCanceledException)
             {
+                context.MergeThreadLocalVariables();
                 context.Status = "stopped";
                 context.IsRunning = false;
                 context.EndTime = DateTime.UtcNow;
@@ -115,14 +125,17 @@ namespace Test_Automation.Services
                 summary.TotalComponents = context.Results.Count;
                 summary.PassedComponents = context.Results.Count(r => r.Passed);
                 summary.FailedComponents = context.Results.Count(r => !r.Passed);
+                context.SaveVariablesForUi();
             }
             catch (Exception)
             {
+                context.MergeThreadLocalVariables();
                 context.Status = "failed";
                 context.IsRunning = false;
                 context.EndTime = DateTime.UtcNow;
                 summary.EndTime = context.EndTime.Value;
                 summary.TotalDurationMs = (long)(summary.EndTime - summary.StartTime).TotalMilliseconds;
+                context.SaveVariablesForUi();
             }
 
             return summary;

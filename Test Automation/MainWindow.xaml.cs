@@ -141,6 +141,7 @@ namespace Test_Automation
         };
 
         public ObservableCollection<string> ExcelSheetNames { get; } = new ObservableCollection<string>();
+        public ObservableCollection<string> DatasetSheetNames { get; } = new ObservableCollection<string>();
 
         public ObservableCollection<string> ProjectRunModeOptions { get; } = new ObservableCollection<string>
         {
@@ -1270,6 +1271,99 @@ namespace Test_Automation
 
                 SetSettingValue("Format", value);
                 RefreshDatasetPreview();
+                OnPropertyChanged(nameof(IsDatasetExcel));
+                OnPropertyChanged(nameof(IsDatasetCsv));
+                OnPropertyChanged(nameof(IsDatasetJson));
+                OnPropertyChanged(nameof(IsDatasetXml));
+            }
+        }
+
+        // Visibility properties for format-specific fields
+        public bool IsDatasetExcel
+        {
+            get
+            {
+                if (!string.Equals(SelectedNode?.Type, "Dataset", StringComparison.OrdinalIgnoreCase))
+                    return false;
+                
+                var format = DatasetFormat;
+                if (string.Equals(format, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return true;
+                
+                // For Auto format, check file extension
+                if (string.Equals(format, "Auto", StringComparison.OrdinalIgnoreCase))
+                {
+                    var ext = Path.GetExtension(DatasetSourcePath)?.ToLowerInvariant() ?? "";
+                    return ext == ".xlsx" || ext == ".xlsm" || ext == ".xls";
+                }
+                
+                return false;
+            }
+        }
+
+        public bool IsDatasetCsv
+        {
+            get
+            {
+                if (!string.Equals(SelectedNode?.Type, "Dataset", StringComparison.OrdinalIgnoreCase))
+                    return false;
+                
+                var format = DatasetFormat;
+                if (string.Equals(format, "Csv", StringComparison.OrdinalIgnoreCase))
+                    return true;
+                
+                // For Auto format, check file extension
+                if (string.Equals(format, "Auto", StringComparison.OrdinalIgnoreCase))
+                {
+                    var ext = Path.GetExtension(DatasetSourcePath)?.ToLowerInvariant() ?? "";
+                    return ext == ".csv";
+                }
+                
+                return false;
+            }
+        }
+
+        public bool IsDatasetJson
+        {
+            get
+            {
+                if (!string.Equals(SelectedNode?.Type, "Dataset", StringComparison.OrdinalIgnoreCase))
+                    return false;
+                
+                var format = DatasetFormat;
+                if (string.Equals(format, "Json", StringComparison.OrdinalIgnoreCase))
+                    return true;
+                
+                // For Auto format, check file extension
+                if (string.Equals(format, "Auto", StringComparison.OrdinalIgnoreCase))
+                {
+                    var ext = Path.GetExtension(DatasetSourcePath)?.ToLowerInvariant() ?? "";
+                    return ext == ".json";
+                }
+                
+                return false;
+            }
+        }
+
+        public bool IsDatasetXml
+        {
+            get
+            {
+                if (!string.Equals(SelectedNode?.Type, "Dataset", StringComparison.OrdinalIgnoreCase))
+                    return false;
+                
+                var format = DatasetFormat;
+                if (string.Equals(format, "Xml", StringComparison.OrdinalIgnoreCase))
+                    return true;
+                
+                // For Auto format, check file extension
+                if (string.Equals(format, "Auto", StringComparison.OrdinalIgnoreCase))
+                {
+                    var ext = Path.GetExtension(DatasetSourcePath)?.ToLowerInvariant() ?? "";
+                    return ext == ".xml";
+                }
+                
+                return false;
             }
         }
 
@@ -1287,7 +1381,12 @@ namespace Test_Automation
 
                 SetSettingValue("SourcePath", value);
                 OnPropertyChanged(nameof(DatasetResolvedSourcePath));
+                RefreshDatasetSheetNames();
                 RefreshDatasetPreview();
+                OnPropertyChanged(nameof(IsDatasetExcel));
+                OnPropertyChanged(nameof(IsDatasetCsv));
+                OnPropertyChanged(nameof(IsDatasetJson));
+                OnPropertyChanged(nameof(IsDatasetXml));
             }
         }
 
@@ -1310,6 +1409,22 @@ namespace Test_Automation
             }
         }
 
+        public string DatasetOutputVariable
+        {
+            get => string.Equals(SelectedNode?.Type, "Dataset", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("OutputVariable", string.Empty)
+                : string.Empty;
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Dataset", StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                SetSettingValue("OutputVariable", value);
+            }
+        }
+
         public string DatasetCsvDelimiter
         {
             get => string.Equals(SelectedNode?.Type, "Dataset", StringComparison.OrdinalIgnoreCase)
@@ -1327,7 +1442,7 @@ namespace Test_Automation
             }
         }
 
-        public bool DatasetCsvHasHeader
+        public bool DatasetHasHeader
         {
             get
             {
@@ -1336,7 +1451,8 @@ namespace Test_Automation
                     return true;
                 }
 
-                var raw = GetSettingValue("CsvHasHeader", "true");
+                // Check HasHeader first, fall back to CsvHasHeader for backward compatibility
+                var raw = GetSettingValue("HasHeader", GetSettingValue("CsvHasHeader", "true"));
                 return bool.TryParse(raw, out var parsed) ? parsed : true;
             }
             set
@@ -1346,7 +1462,7 @@ namespace Test_Automation
                     return;
                 }
 
-                SetSettingValue("CsvHasHeader", value ? "true" : "false");
+                SetSettingValue("HasHeader", value ? "true" : "false");
                 RefreshDatasetPreview();
             }
         }
@@ -4967,6 +5083,40 @@ namespace Test_Automation
             RefreshDatasetPreview();
         }
 
+        private void RefreshDatasetSheetNamesButton_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshDatasetSheetNames();
+        }
+
+        public void RefreshDatasetSheetNames()
+        {
+            DatasetSheetNames.Clear();
+            var filePath = ResolveWithProjectVariables(DatasetSourcePath);
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+                return;
+
+            try
+            {
+                var format = DatasetFormat;
+                if (!string.Equals(format, "Excel", StringComparison.OrdinalIgnoreCase))
+                {
+                    var extension = Path.GetExtension(filePath)?.Trim().ToLowerInvariant() ?? string.Empty;
+                    if (extension != ".xlsx" && extension != ".xlsm" && extension != ".xls")
+                        return;
+                }
+
+                using var workbook = new ClosedXML.Excel.XLWorkbook(filePath);
+                foreach (var sheet in workbook.Worksheets)
+                {
+                    DatasetSheetNames.Add(sheet.Name);
+                }
+            }
+            catch (Exception)
+            {
+                // ignore errors
+            }
+        }
+
         private void BrowseExcelFileButton_Click(object sender, RoutedEventArgs e)
         {
             if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
@@ -5187,7 +5337,7 @@ Tips:
                 ["SourcePath"] = ResolveWithProjectVariables(DatasetSourcePath),
                 ["SheetName"] = ResolveWithProjectVariables(DatasetSheetName),
                 ["CsvDelimiter"] = ResolveWithProjectVariables(DatasetCsvDelimiter),
-                ["CsvHasHeader"] = DatasetCsvHasHeader ? "true" : "false",
+                ["HasHeader"] = DatasetHasHeader ? "true" : "false",
                 ["JsonArrayPath"] = ResolveWithProjectVariables(DatasetJsonArrayPath),
                 ["XmlRowPath"] = ResolveWithProjectVariables(DatasetXmlRowPath),
                 ["MaxRows"] = ResolveWithProjectVariables(DatasetMaxRows)
@@ -5196,11 +5346,13 @@ Tips:
             try
             {
                 var rows = Test_Automation.Componentes.Dataset.LoadRows(resolvedSettings);
-                var columnNames = rows
-                    .SelectMany(row => row.Keys)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
+                
+                // Preserve original column order from source (first row's keys)
+                var columnNames = rows.Count > 0
+                    ? rows[0].Keys.ToList()
+                    : rows.SelectMany(row => row.Keys)
+                          .Distinct(StringComparer.OrdinalIgnoreCase)
+                          .ToList();
 
                 if (columnNames.Count == 0)
                 {
@@ -6751,6 +6903,57 @@ Tips:
                 }, PrettyJsonOptions);
 
                 PreviewLogs = $"[{now}] Loop preview refreshed\n[{now}] Iterations: {iterations}\n[{now}] Current iteration: {lastLoopData?.CurrentIteration ?? 0}";
+                AppendExtractionPreview(now);
+                RebuildPreviewLogsForSelectedNode();
+                return;
+            }
+
+            if (nodeType == "Dataset")
+            {
+                var sourcePath = GetSettingValue("SourcePath", string.Empty);
+                var format = GetSettingValue("Format", "Auto");
+                var sheetName = GetSettingValue("SheetName", string.Empty);
+                var hasHeader = bool.TryParse(GetSettingValue("HasHeader", "true"), out var hh) ? hh : true;
+                
+                var latestDatasetExecution = nodeExecutionResults
+                    .OrderByDescending(result => result.EndTime ?? result.StartTime)
+                    .FirstOrDefault();
+                var lastDataset = GetLastExecutionData<DatasetData>(nodeId);
+                
+                // Show actual rows data in output tab (not metadata)
+                PreviewOutput = lastDataset?.Rows != null 
+                    ? JsonSerializer.Serialize(lastDataset.Rows, PrettyJsonOptions) 
+                    : string.Empty;
+
+                var datasetRuns = nodeExecutionResults
+                    .Select(result => new
+                    {
+                        threadIndex = result.ThreadIndex,
+                        startTime = result.StartTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                        endTime = result.EndTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                        durationMs = result.DurationMs,
+                        status = result.Status,
+                        rowCount = (result.Data as DatasetData)?.Rows?.Count ?? 0,
+                        dataSource = (result.Data as DatasetData)?.DataSource
+                    })
+                    .ToList();
+
+                PreviewRequest = JsonSerializer.Serialize(new
+                {
+                    component = nodeName,
+                    type = "Dataset",
+                    format,
+                    sourcePath,
+                    sheetName,
+                    hasHeader
+                }, PrettyJsonOptions);
+
+                PreviewResponse = JsonSerializer.Serialize(new
+                {
+                    runs = datasetRuns
+                }, PrettyJsonOptions);
+
+                PreviewLogs = $"[{now}] Dataset preview refreshed\n[{now}] Source: {sourcePath}\n[{now}] Rows: {lastDataset?.Rows?.Count ?? 0}";
                 AppendExtractionPreview(now);
                 RebuildPreviewLogsForSelectedNode();
                 return;
@@ -9312,12 +9515,16 @@ Tips:
             OnPropertyChanged(nameof(DatasetResolvedSourcePath));
             OnPropertyChanged(nameof(DatasetSheetName));
             OnPropertyChanged(nameof(DatasetCsvDelimiter));
-            OnPropertyChanged(nameof(DatasetCsvHasHeader));
+            OnPropertyChanged(nameof(DatasetHasHeader));
             OnPropertyChanged(nameof(DatasetJsonArrayPath));
             OnPropertyChanged(nameof(DatasetXmlRowPath));
             OnPropertyChanged(nameof(DatasetMaxRows));
             OnPropertyChanged(nameof(DatasetPreviewRows));
             OnPropertyChanged(nameof(DatasetPreviewStatus));
+            OnPropertyChanged(nameof(IsDatasetExcel));
+            OnPropertyChanged(nameof(IsDatasetCsv));
+            OnPropertyChanged(nameof(IsDatasetJson));
+            OnPropertyChanged(nameof(IsDatasetXml));
             OnPropertyChanged(nameof(TimerDelayMs));
             OnPropertyChanged(nameof(LoopIterations));
             OnPropertyChanged(nameof(ForeachSourceVariable));
