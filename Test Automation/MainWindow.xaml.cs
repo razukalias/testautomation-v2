@@ -1831,6 +1831,8 @@ namespace Test_Automation
             if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
                 return;
 
+            var savedSelectedSheet = ExcelSelectedSheet; // Save current selection
+            
             ExcelSheetNames.Clear();
             var filePath = ResolveWithProjectVariables(ExcelFilePath);
             if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
@@ -1842,6 +1844,17 @@ namespace Test_Automation
                 foreach (var sheet in workbook.Worksheets)
                 {
                     ExcelSheetNames.Add(sheet.Name);
+                }
+                
+                // Restore selection or set to first sheet
+                if (!string.IsNullOrWhiteSpace(savedSelectedSheet) && 
+                    ExcelSheetNames.Contains(savedSelectedSheet))
+                {
+                    ExcelSelectedSheet = savedSelectedSheet;
+                }
+                else if (ExcelSheetNames.Count > 0 && string.IsNullOrWhiteSpace(savedSelectedSheet))
+                {
+                    ExcelSelectedSheet = ExcelSheetNames[0];
                 }
             }
             catch (Exception)
@@ -9743,6 +9756,8 @@ Tips:
             OnPropertyChanged(nameof(ExcelFileModeNew));
             OnPropertyChanged(nameof(ExcelFileModeExisting));
             OnPropertyChanged(nameof(ExcelFilePath));
+            OnPropertyChanged(nameof(ExcelFolderPath));
+            OnPropertyChanged(nameof(ExcelFileName));
             OnPropertyChanged(nameof(ExcelSheetName));
             OnPropertyChanged(nameof(ExcelSelectedSheet));
             OnPropertyChanged(nameof(ExcelOperation));
