@@ -1132,7 +1132,146 @@
                                           MinHeight="180"
                                           MaxHeight="300"
                                           GridLinesVisibility="All" />
-                            </Border>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                        <Border  BorderThickness="1" Padding="8" CornerRadius="3" Margin="0,0,0,8"
+                            Visibility="{Binding IsExcelSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="Excel" FontWeight="SemiBold" Margin="0,0,0,6" />
+                            
+                            <!-- File Mode -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="File Mode" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <RadioButton Content="New" IsChecked="{Binding ExcelFileModeNew, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0" />
+                                    <RadioButton Content="Existing" IsChecked="{Binding ExcelFileModeExisting, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+                            </Grid>
+                            
+                            <!-- Folder Path (for new file) -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelFileModeNew, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Folder Path" />
+                                <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding ExcelFolderPath, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Grid.Column="2" Content="Browse Folder" Width="90" Click="BrowseExcelFolderButton_Click" />
+                            </Grid>
+                            
+                            <!-- File Name (for new file) -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelFileModeNew, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="File Name" />
+                                <TextBox Grid.Column="1" Text="{Binding ExcelFileName, UpdateSourceTrigger=PropertyChanged}" ToolTip="Enter file name, e.g. output.xlsx" />
+                            </Grid>
+                            
+                            <!-- File Path (for existing file) -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelFileModeExisting, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="File Path" />
+                                <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding ExcelFilePath, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Grid.Column="2" Content="Browse File" Width="90" Click="BrowseExcelFileButton_Click" />
+                            </Grid>
+                            
+                            <!-- Sheet Name (for new file) -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelShowSheetName, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Sheet Name" />
+                                <TextBox Grid.Column="1" Text="{Binding ExcelSheetName, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                            
+                            <!-- Sheet Dropdown (for existing file) -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelShowSheetDropdown, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Sheet" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding ExcelSheetNames}" SelectedItem="{Binding ExcelSelectedSheet, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Grid.Column="2" Content="Refresh" Width="70" Click="RefreshExcelSheetNamesButton_Click" />
+                            </Grid>
+                            
+                            <!-- Operation -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Operation" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding ExcelOperationOptions}" SelectedItem="{Binding ExcelOperation, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                            
+                            <!-- Column and Row -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelShowCellReference, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="60" />
+                                    <ColumnDefinition Width="60" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Cell Reference" />
+                                <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding ExcelColumn, UpdateSourceTrigger=PropertyChanged}" ToolTip="Column letter (A) or number (1)" />
+                                <TextBox Grid.Column="2" Margin="0,0,6,0" Text="{Binding ExcelRow, UpdateSourceTrigger=PropertyChanged}" ToolTip="Row number" />
+                            </Grid>
+                            
+                            <!-- Value (for WriteCell) -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelShowValue, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Value" />
+                                <TextBox Grid.Column="1" Text="{Binding ExcelValue, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                            
+                            <!-- Values JSON (for WriteRange/AppendRow) -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelShowValuesJson, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Values (JSON)" />
+                                <TextBox Grid.Column="1" Text="{Binding ExcelValuesJson, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Height="100" ToolTip="JSON array of arrays, e.g. [[&quot;A&quot;,&quot;B&quot;],[1,2]]" />
+                            </Grid>
+                            
+                            <!-- Delete/Clear Range -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding ExcelShowDeleteRange, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="60" />
+                                    <ColumnDefinition Width="60" />
+                                    <ColumnDefinition Width="60" />
+                                    <ColumnDefinition Width="60" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Range" />
+                                <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding ExcelDeleteStartColumn, UpdateSourceTrigger=PropertyChanged}" ToolTip="Start column" />
+                                <TextBox Grid.Column="2" Margin="0,0,6,0" Text="{Binding ExcelDeleteStartRow, UpdateSourceTrigger=PropertyChanged}" ToolTip="Start row" />
+                                <TextBox Grid.Column="3" Margin="0,0,6,0" Text="{Binding ExcelDeleteEndColumn, UpdateSourceTrigger=PropertyChanged}" ToolTip="End column" />
+                                <TextBox Grid.Column="4" Margin="0,0,6,0" Text="{Binding ExcelDeleteEndRow, UpdateSourceTrigger=PropertyChanged}" ToolTip="End row" />
+                            </Grid>
+                            
+                            <!-- Help Button -->
+                            <Button Content="?" HorizontalAlignment="Right" Width="20" Height="20" Click="ExcelHelpButton_Click" ToolTip="Show help instructions" />
                         </StackPanel>
                     </Border>
 

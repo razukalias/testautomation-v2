@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -31,9 +32,10 @@ namespace Test_Automation.Componentes
                 Headers = headers
             };
 
-            data.Properties["authType"] = Settings.TryGetValue("AuthType", out var authTypeValue)
+            var authType = Settings.TryGetValue("AuthType", out var authTypeValue)
                 ? authTypeValue
                 : "WindowsIntegrated";
+            data.Properties["authType"] = authType;
 
             if (Settings.TryGetValue("Headers", out var headersJson) && !string.IsNullOrWhiteSpace(headersJson))
             {
@@ -62,7 +64,12 @@ namespace Test_Automation.Componentes
             {
                 var requestBody = BuildGraphQlPayload(data.Query, data.Variables);
 
-                using var client = new HttpClient();
+                using var handler = new HttpClientHandler();
+                if (string.Equals(authType, "WindowsIntegrated", StringComparison.OrdinalIgnoreCase))
+                {
+                    handler.Credentials = CredentialCache.DefaultCredentials;
+                }
+                using var client = new HttpClient(handler);
                 using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
                 {
                     Content = new StringContent(requestBody, Encoding.UTF8, "application/json")

@@ -30,6 +30,7 @@ namespace Test_Automation.Factories
                 "randomgenerator" => new RandomGenerator(),
                 "random" => new RandomGenerator(),
                 "file" => new FileComponent(),
+                "excel" => new Excel(),
                 _ => throw new ArgumentException($"Unknown component type: {componentType}")
             };
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,9 +30,10 @@ namespace Test_Automation.Componentes
                 Body = Settings.TryGetValue("Body", out var body) ? body : string.Empty
             };
 
-            data.Properties["authType"] = Settings.TryGetValue("AuthType", out var authTypeValue)
+            var authType = Settings.TryGetValue("AuthType", out var authTypeValue)
                 ? authTypeValue
                 : "WindowsIntegrated";
+            data.Properties["authType"] = authType;
 
             if (Settings.TryGetValue("Headers", out var headersJson) && !string.IsNullOrWhiteSpace(headersJson))
             {
@@ -58,7 +60,12 @@ namespace Test_Automation.Componentes
 
             if (!string.IsNullOrWhiteSpace(url))
             {
-                using var client = new HttpClient();
+                using var handler = new HttpClientHandler();
+                if (string.Equals(authType, "WindowsIntegrated", StringComparison.OrdinalIgnoreCase))
+                {
+                    handler.Credentials = CredentialCache.DefaultCredentials;
+                }
+                using var client = new HttpClient(handler);
                 using var request = new HttpRequestMessage(new HttpMethod(data.Method), url);
 
                 foreach (var header in data.Headers)

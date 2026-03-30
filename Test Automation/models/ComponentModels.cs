@@ -385,4 +385,58 @@ public class VariableExtractorData : ComponentData
         [JsonPropertyName("errorMessage")]
         public string ErrorMessage { get; set; } = string.Empty;
     }
+
+    /// <summary>
+    /// Excel component model
+    /// </summary>
+    public class ExcelData : ComponentData
+    {
+        [JsonPropertyName("operation")]
+        public string Operation { get; set; } = string.Empty;
+
+        [JsonPropertyName("filePath")]
+        public string FilePath { get; set; } = string.Empty;
+
+        [JsonPropertyName("fileMode")]
+        public string FileMode { get; set; } = "Existing"; // "New" or "Existing"
+
+        [JsonPropertyName("sheetName")]
+        public string SheetName { get; set; } = string.Empty;
+
+        [JsonPropertyName("column")]
+        public string Column { get; set; } = string.Empty;
+
+        [JsonPropertyName("row")]
+        public int Row { get; set; } = 1;
+
+        [JsonPropertyName("value")]
+        public string Value { get; set; } = string.Empty;
+
+        [JsonPropertyName("values")]
+        public string Values { get; set; } = string.Empty; // JSON array for range operations
+
+        [JsonPropertyName("deleteStartColumn")]
+        public string DeleteStartColumn { get; set; } = string.Empty;
+
+        [JsonPropertyName("deleteStartRow")]
+        public int DeleteStartRow { get; set; } = 1;
+
+        [JsonPropertyName("deleteEndColumn")]
+        public string DeleteEndColumn { get; set; } = string.Empty;
+
+        [JsonPropertyName("deleteEndRow")]
+        public int DeleteEndRow { get; set; } = 1;
+
+        [JsonPropertyName("result")]
+        public string Result { get; set; } = string.Empty;
+
+        [JsonPropertyName("success")]
+        public bool Success { get; set; } = false;
+
+        [JsonPropertyName("errorMessage")]
+        public string ErrorMessage { get; set; } = string.Empty;
+
+        [JsonPropertyName("sheetNames")]
+        public List<string> SheetNames { get; set; } = new List<string>();
+    }
 }

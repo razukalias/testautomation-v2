@@ -129,6 +129,19 @@ namespace Test_Automation
             "Xml"
         };
 
+        public ObservableCollection<string> ExcelOperationOptions { get; } = new ObservableCollection<string>
+        {
+            "WriteCell",
+            "WriteRange",
+            "AppendRow",
+            "CreateSheet",
+            "DeleteRows",
+            "DeleteColumns",
+            "ClearCells"
+        };
+
+        public ObservableCollection<string> ExcelSheetNames { get; } = new ObservableCollection<string>();
+
         public ObservableCollection<string> ProjectRunModeOptions { get; } = new ObservableCollection<string>
         {
             "Sequence",
@@ -620,6 +633,7 @@ namespace Test_Automation
         public bool IsRandomGeneratorSelected => SelectedNode?.Type == "RandomGenerator";
         public bool IsWhileSelected => SelectedNode?.Type == "While";
         public bool IsFileSelected => SelectedNode?.Type == "File";
+        public bool IsExcelSelected => SelectedNode?.Type == "Excel";
         public bool IsTestPlanSelected => SelectedNode?.Type == "TestPlan";
 
         public ExecutionType SelectedExecutionType
@@ -1403,6 +1417,285 @@ namespace Test_Automation
                 OnPropertyChanged();
             }
         }
+
+        #region Excel Properties
+
+        public bool ExcelFileModeNew
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? string.Equals(GetSettingValue("FileMode", "Existing"), "New", StringComparison.OrdinalIgnoreCase)
+                : false;
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("FileMode", value ? "New" : "Existing");
+                OnPropertyChanged(nameof(ExcelFileModeNew));
+                OnPropertyChanged(nameof(ExcelFileModeExisting));
+                OnPropertyChanged(nameof(ExcelShowSheetName));
+                OnPropertyChanged(nameof(ExcelShowSheetDropdown));
+            }
+        }
+
+        public bool ExcelFileModeExisting
+        {
+            get => !ExcelFileModeNew;
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("FileMode", value ? "Existing" : "New");
+                OnPropertyChanged(nameof(ExcelFileModeNew));
+                OnPropertyChanged(nameof(ExcelFileModeExisting));
+                OnPropertyChanged(nameof(ExcelShowSheetName));
+                OnPropertyChanged(nameof(ExcelShowSheetDropdown));
+            }
+        }
+
+        public string ExcelFilePath
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("FilePath", string.Empty)
+                : string.Empty;
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("FilePath", value);
+                OnPropertyChanged(nameof(ExcelFilePath));
+            }
+        }
+
+        public string ExcelFolderPath
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("FolderPath", string.Empty)
+                : string.Empty;
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("FolderPath", value);
+                OnPropertyChanged(nameof(ExcelFolderPath));
+            }
+        }
+
+        public string ExcelFileName
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("FileName", string.Empty)
+                : string.Empty;
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("FileName", value);
+                OnPropertyChanged(nameof(ExcelFileName));
+            }
+        }
+
+        public string ExcelSheetName
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("SheetName", string.Empty)
+                : string.Empty;
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("SheetName", value);
+                OnPropertyChanged(nameof(ExcelSheetName));
+            }
+        }
+
+        public string ExcelSelectedSheet
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("SelectedSheet", string.Empty)
+                : string.Empty;
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("SelectedSheet", value);
+                OnPropertyChanged(nameof(ExcelSelectedSheet));
+            }
+        }
+
+        public string ExcelOperation
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("Operation", "WriteCell")
+                : "WriteCell";
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("Operation", value);
+                OnPropertyChanged(nameof(ExcelOperation));
+                OnPropertyChanged(nameof(ExcelShowCellReference));
+                OnPropertyChanged(nameof(ExcelShowValue));
+                OnPropertyChanged(nameof(ExcelShowValuesJson));
+                OnPropertyChanged(nameof(ExcelShowDeleteRange));
+            }
+        }
+
+        public string ExcelColumn
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("Column", "A")
+                : "A";
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("Column", value);
+                OnPropertyChanged(nameof(ExcelColumn));
+            }
+        }
+
+        public string ExcelRow
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("Row", "1")
+                : "1";
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("Row", value);
+                OnPropertyChanged(nameof(ExcelRow));
+            }
+        }
+
+        public string ExcelValue
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("Value", string.Empty)
+                : string.Empty;
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("Value", value);
+                OnPropertyChanged(nameof(ExcelValue));
+            }
+        }
+
+        public string ExcelValuesJson
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("Values", "[]")
+                : "[]";
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("Values", value);
+                OnPropertyChanged(nameof(ExcelValuesJson));
+            }
+        }
+
+        public string ExcelDeleteStartColumn
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("DeleteStartColumn", "A")
+                : "A";
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("DeleteStartColumn", value);
+                OnPropertyChanged(nameof(ExcelDeleteStartColumn));
+            }
+        }
+
+        public string ExcelDeleteStartRow
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("DeleteStartRow", "1")
+                : "1";
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("DeleteStartRow", value);
+                OnPropertyChanged(nameof(ExcelDeleteStartRow));
+            }
+        }
+
+        public string ExcelDeleteEndColumn
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("DeleteEndColumn", "A")
+                : "A";
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("DeleteEndColumn", value);
+                OnPropertyChanged(nameof(ExcelDeleteEndColumn));
+            }
+        }
+
+        public string ExcelDeleteEndRow
+        {
+            get => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase)
+                ? GetSettingValue("DeleteEndRow", "1")
+                : "1";
+            set
+            {
+                if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                    return;
+                SetSettingValue("DeleteEndRow", value);
+                OnPropertyChanged(nameof(ExcelDeleteEndRow));
+            }
+        }
+
+        // Visibility helpers
+        public bool ExcelShowSheetName => ExcelFileModeNew && string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase);
+        public bool ExcelShowSheetDropdown => ExcelFileModeExisting && string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase);
+        public bool ExcelShowCellReference => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase) &&
+            (string.Equals(ExcelOperation, "WriteCell", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(ExcelOperation, "WriteRange", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(ExcelOperation, "AppendRow", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(ExcelOperation, "ClearCells", StringComparison.OrdinalIgnoreCase));
+        public bool ExcelShowValue => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(ExcelOperation, "WriteCell", StringComparison.OrdinalIgnoreCase);
+        public bool ExcelShowValuesJson => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase) &&
+            (string.Equals(ExcelOperation, "WriteRange", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(ExcelOperation, "AppendRow", StringComparison.OrdinalIgnoreCase));
+        public bool ExcelShowDeleteRange => string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase) &&
+            (string.Equals(ExcelOperation, "DeleteRows", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(ExcelOperation, "DeleteColumns", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(ExcelOperation, "ClearCells", StringComparison.OrdinalIgnoreCase));
+
+        // Helper to load sheet names from file
+        public void RefreshExcelSheetNames()
+        {
+            if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            ExcelSheetNames.Clear();
+            var filePath = ResolveWithProjectVariables(ExcelFilePath);
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+                return;
+
+            try
+            {
+                using var workbook = new ClosedXML.Excel.XLWorkbook(filePath);
+                foreach (var sheet in workbook.Worksheets)
+                {
+                    ExcelSheetNames.Add(sheet.Name);
+                }
+            }
+            catch (Exception)
+            {
+                // ignore errors
+            }
+        }
+
+        #endregion
 
         private static string NormalizeSqlProvider(string? provider)
         {
@@ -2468,7 +2761,7 @@ namespace Test_Automation
 
         private static readonly string[] StepTypes =
         {
-            "Http", "GraphQl", "Sql", "Dataset", "Assert", "VariableExtractor", "Script", "Timer", "RandomGenerator", "While", "File"
+            "Http", "GraphQl", "Sql", "Dataset", "Assert", "VariableExtractor", "Script", "Timer", "RandomGenerator", "While", "File", "Excel"
         };
 
         public MainWindow()
@@ -4623,6 +4916,83 @@ namespace Test_Automation
         private void RefreshDatasetPreviewButton_Click(object sender, RoutedEventArgs e)
         {
             RefreshDatasetPreview();
+        }
+
+        private void BrowseExcelFileButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var dialog = new OpenFileDialog
+            {
+                Title = "Select Excel File",
+                Filter = "Excel files (*.xlsx;*.xlsm;*.xls)|*.xlsx;*.xlsm;*.xls|All files (*.*)|*.*"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            ExcelFilePath = dialog.FileName;
+            RefreshExcelSheetNames();
+        }
+
+        private void BrowseExcelFolderButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.Equals(SelectedNode?.Type, "Excel", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var dialog = new OpenFolderDialog
+            {
+                Title = "Select Folder for New Excel File"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            ExcelFolderPath = dialog.FolderName;
+        }
+
+        private void RefreshExcelSheetNamesButton_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshExcelSheetNames();
+        }
+
+        private void ExcelHelpButton_Click(object sender, RoutedEventArgs e)
+        {
+            var helpText = @"Excel Component Help:
+
+Operations:
+- WriteCell: Write a single value to a specified cell (column & row).
+- WriteRange: Write multiple cells from a JSON array of arrays starting at a cell.
+- AppendRow: Append rows at the end of the sheet from a JSON array of arrays.
+- CreateSheet: Create a new sheet with the given name.
+- DeleteRows: Clear content of rows in a range (start row to end row).
+- DeleteColumns: Clear content of columns in a range (start column to end column).
+- ClearCells: Clear content of a rectangular range (start cell to end cell).
+
+Parameters:
+- File Mode: New or Existing file.
+- File Path: Path to the Excel file.
+- Sheet Name: For new files, name of the sheet to create.
+- Sheet: For existing files, select sheet from dropdown.
+- Column/Row: Cell reference (column letter or number, row number).
+- Value: Single value for WriteCell (supports variables like {{var}}).
+- Values JSON: JSON array of arrays for WriteRange/AppendRow.
+- Range: Start/End column/row for Delete/Clear operations.
+
+Tips:
+- Column can be letter (A) or number (1).
+- Use Refresh button to load sheet names from file.
+- Variables are resolved before writing (use {{variableName}}).";
+            MessageBox.Show(helpText, "Excel Component Help", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void BrowseFileSourceFileButton_Click(object sender, RoutedEventArgs e)
@@ -8968,6 +9338,31 @@ namespace Test_Automation
             OnPropertyChanged(nameof(FileShowReadMode));
             OnPropertyChanged(nameof(FileShowSelectedFilesBrowse));
             OnPropertyChanged(nameof(FileResultPreview));
+            OnPropertyChanged(nameof(IsExcelSelected));
+            OnPropertyChanged(nameof(ExcelFileModeNew));
+            OnPropertyChanged(nameof(ExcelFileModeExisting));
+            OnPropertyChanged(nameof(ExcelFilePath));
+            OnPropertyChanged(nameof(ExcelSheetName));
+            OnPropertyChanged(nameof(ExcelSelectedSheet));
+            OnPropertyChanged(nameof(ExcelOperation));
+            OnPropertyChanged(nameof(ExcelColumn));
+            OnPropertyChanged(nameof(ExcelRow));
+            OnPropertyChanged(nameof(ExcelValue));
+            OnPropertyChanged(nameof(ExcelValuesJson));
+            OnPropertyChanged(nameof(ExcelDeleteStartColumn));
+            OnPropertyChanged(nameof(ExcelDeleteStartRow));
+            OnPropertyChanged(nameof(ExcelDeleteEndColumn));
+            OnPropertyChanged(nameof(ExcelDeleteEndRow));
+            OnPropertyChanged(nameof(ExcelShowSheetName));
+            OnPropertyChanged(nameof(ExcelShowSheetDropdown));
+            OnPropertyChanged(nameof(ExcelShowCellReference));
+            OnPropertyChanged(nameof(ExcelShowValue));
+            OnPropertyChanged(nameof(ExcelShowValuesJson));
+            OnPropertyChanged(nameof(ExcelShowDeleteRange));
+            if (IsExcelSelected)
+            {
+                RefreshExcelSheetNames();
+            }
             OnPropertyChanged(nameof(IsWhileSelected));
             OnPropertyChanged(nameof(WhileMaxIterations));
             OnPropertyChanged(nameof(WhileTimeoutMs));
