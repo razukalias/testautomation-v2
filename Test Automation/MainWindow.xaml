@@ -494,8 +494,46 @@
                                                                                     </Grid.ColumnDefinitions>
                                                                                     <TextBlock Grid.Column="0" VerticalAlignment="Top" Text="GraphQL Vars" />
                                                                                     <TextBox Grid.Column="1" Height="70" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Text="{Binding Variables, UpdateSourceTrigger=LostFocus}" />
-                                                                                </Grid>
-                                                                            </StackPanel>
+                            </Grid>
+
+                            <TextBlock Text="Output Variables" FontWeight="SemiBold" Margin="0,10,0,6" />
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Response Body" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding VariableKeyOptions}"
+                                          SelectedItem="{Binding HttpResponseBodyVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True"
+                                          IsReadOnly="False" />
+                            </Grid>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Status Code" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding VariableKeyOptions}"
+                                          SelectedItem="{Binding HttpResponseStatusCodeVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True"
+                                          IsReadOnly="False" />
+                            </Grid>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Duration" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding VariableKeyOptions}"
+                                          SelectedItem="{Binding HttpResponseDurationVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True"
+                                          IsReadOnly="False" />
+                            </Grid>
+                        </StackPanel>
                                                                         </Border>
                                                                     </DataTemplate>
                                                                 </ItemsControl.ItemTemplate>
@@ -1859,8 +1897,46 @@
                                         <ComboBox Grid.Column="1"
                                                   ItemsSource="{Binding RandomItemTypeOptions}"
                                                   SelectedItem="{Binding RandomItemType, UpdateSourceTrigger=PropertyChanged}" />
-                                    </Grid>
-                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Text="Output Variables" FontWeight="SemiBold" Margin="0,10,0,6" />
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Response Body" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding VariableKeyOptions}"
+                                          SelectedItem="{Binding GraphQLResponseBodyVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True"
+                                          IsReadOnly="False" />
+                            </Grid>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Status Code" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding VariableKeyOptions}"
+                                          SelectedItem="{Binding GraphQLResponseStatusCodeVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True"
+                                          IsReadOnly="False" />
+                            </Grid>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Duration" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding VariableKeyOptions}"
+                                          SelectedItem="{Binding GraphQLResponseDurationVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True"
+                                          IsReadOnly="False" />
+                            </Grid>
+                        </StackPanel>
                             </Border>
                             
                             <!-- JSON Structure Builder -->

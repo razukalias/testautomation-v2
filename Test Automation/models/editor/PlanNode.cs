@@ -193,6 +193,9 @@ namespace Test_Automation.Models.Editor
                 Settings.Add(new NodeSetting("OAuthClientId", ""));
                 Settings.Add(new NodeSetting("OAuthClientSecret", ""));
                 Settings.Add(new NodeSetting("OAuthScope", ""));
+                Settings.Add(new NodeSetting("ResponseBodyVariable", ""));
+                Settings.Add(new NodeSetting("ResponseStatusCodeVariable", ""));
+                Settings.Add(new NodeSetting("ResponseDurationVariable", ""));
             }
             else if (type == "GraphQl")
             {
@@ -211,6 +214,9 @@ namespace Test_Automation.Models.Editor
                 Settings.Add(new NodeSetting("OAuthClientId", ""));
                 Settings.Add(new NodeSetting("OAuthClientSecret", ""));
                 Settings.Add(new NodeSetting("OAuthScope", ""));
+                Settings.Add(new NodeSetting("ResponseBodyVariable", ""));
+                Settings.Add(new NodeSetting("ResponseStatusCodeVariable", ""));
+                Settings.Add(new NodeSetting("ResponseDurationVariable", ""));
             }
             else if (type == "Sql")
             {

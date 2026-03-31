@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -20,6 +21,9 @@ namespace Test_Automation.Componentes
             var url = Settings.TryGetValue("Url", out var urlValue) ? urlValue : string.Empty;
             var headers = new Dictionary<string, string>();
             ApplyAuthSettings(Settings, headers, ref url);
+            var responseBodyVariable = Settings.TryGetValue("ResponseBodyVariable", out var rbVar) ? rbVar?.Trim() : string.Empty;
+            var responseStatusCodeVariable = Settings.TryGetValue("ResponseStatusCodeVariable", out var scVar) ? scVar?.Trim() : string.Empty;
+            var responseDurationVariable = Settings.TryGetValue("ResponseDurationVariable", out var durVar) ? durVar?.Trim() : string.Empty;
 
             var data = new HttpData
             {
@@ -82,6 +86,7 @@ namespace Test_Automation.Componentes
                     request.Content = new StringContent(data.Body, Encoding.UTF8, "application/json");
                 }
 
+                var stopwatch = Stopwatch.StartNew();
                 using var response = await client.SendAsync(request, context.StopToken);
                 data.ResponseStatus = (int)response.StatusCode;
                 foreach (var header in response.Headers)
@@ -95,6 +100,22 @@ namespace Test_Automation.Componentes
                 }
 
                 data.ResponseBody = await response.Content.ReadAsStringAsync(context.StopToken);
+                stopwatch.Stop();
+                data.Properties["durationMs"] = stopwatch.Elapsed.TotalMilliseconds.ToString();
+
+                // Set output variables if specified
+                if (!string.IsNullOrEmpty(responseBodyVariable))
+                {
+                    context.SetVariable(responseBodyVariable, data.ResponseBody);
+                }
+                if (!string.IsNullOrEmpty(responseStatusCodeVariable))
+                {
+                    context.SetVariable(responseStatusCodeVariable, data.ResponseStatus.ToString());
+                }
+                if (!string.IsNullOrEmpty(responseDurationVariable))
+                {
+                    context.SetVariable(responseDurationVariable, stopwatch.Elapsed.TotalMilliseconds.ToString());
+                }
             }
 
             return data;

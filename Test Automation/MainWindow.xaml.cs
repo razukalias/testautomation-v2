@@ -169,6 +169,7 @@ namespace Test_Automation
         private bool _isNormalizingVariables;
         private int _variableUsageVersion;
         private Dictionary<string, List<string>> _variableUsageMap = new(StringComparer.OrdinalIgnoreCase);
+        private ObservableCollection<string> _variableKeyOptions = new();
         private string? _currentProjectFilePath;
         public string CurrentProjectFilePath => string.IsNullOrWhiteSpace(_currentProjectFilePath) ? "Unsaved Project" : _currentProjectFilePath;
         private string _jsonPreview = "{}";
@@ -684,6 +685,8 @@ namespace Test_Automation
             }
         }
 
+        public ObservableCollection<string> VariableKeyOptions => _variableKeyOptions;
+
         public string ProjectDescription
         {
             get => GetSettingValue("Description", string.Empty);
@@ -1033,6 +1036,24 @@ namespace Test_Automation
         {
             get => GetSettingValue("OAuthScope", string.Empty);
             set => SetSettingValue("OAuthScope", value);
+        }
+
+        public string HttpResponseBodyVariable
+        {
+            get => GetSettingValue("ResponseBodyVariable", string.Empty);
+            set => SetSettingValue("ResponseBodyVariable", value);
+        }
+
+        public string HttpResponseStatusCodeVariable
+        {
+            get => GetSettingValue("ResponseStatusCodeVariable", string.Empty);
+            set => SetSettingValue("ResponseStatusCodeVariable", value);
+        }
+
+        public string HttpResponseDurationVariable
+        {
+            get => GetSettingValue("ResponseDurationVariable", string.Empty);
+            set => SetSettingValue("ResponseDurationVariable", value);
         }
 
         public string GraphQlEndpoint
@@ -8848,6 +8869,17 @@ Tips:
 
             _variableUsageMap = map;
             VariableUsageVersion++;
+            RefreshVariableKeyOptions();
+        }
+
+        private void RefreshVariableKeyOptions()
+        {
+            _variableKeyOptions.Clear();
+            _variableKeyOptions.Add(string.Empty);
+            foreach (var key in _variableUsageMap.Keys.OrderBy(k => k))
+            {
+                _variableKeyOptions.Add(key);
+            }
         }
 
         private static void BuildVariableUsageMap(PlanNode node, Dictionary<string, List<string>> map)
