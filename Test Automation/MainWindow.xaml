@@ -689,7 +689,7 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Response Body" />
                                 <ComboBox Grid.Column="1"
-                                          ItemsSource="{Binding VariableKeyOptions}"
+                                          ItemsSource="{Binding AccessibleVariableKeys}"
                                           SelectedItem="{Binding GraphQLResponseBodyVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           IsReadOnly="False" />
@@ -701,7 +701,7 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Status Code" />
                                 <ComboBox Grid.Column="1"
-                                          ItemsSource="{Binding VariableKeyOptions}"
+                                          ItemsSource="{Binding AccessibleVariableKeys}"
                                           SelectedItem="{Binding GraphQLResponseStatusCodeVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           IsReadOnly="False" />
@@ -713,7 +713,7 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Duration" />
                                 <ComboBox Grid.Column="1"
-                                          ItemsSource="{Binding VariableKeyOptions}"
+                                          ItemsSource="{Binding AccessibleVariableKeys}"
                                           SelectedItem="{Binding GraphQLResponseDurationVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           IsReadOnly="False" />

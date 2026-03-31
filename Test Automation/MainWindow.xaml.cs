@@ -170,6 +170,7 @@ namespace Test_Automation
         private int _variableUsageVersion;
         private Dictionary<string, List<string>> _variableUsageMap = new(StringComparer.OrdinalIgnoreCase);
         private ObservableCollection<string> _variableKeyOptions = new();
+        private ObservableCollection<string> _accessibleVariableKeys = new();
         private string? _currentProjectFilePath;
         public string CurrentProjectFilePath => string.IsNullOrWhiteSpace(_currentProjectFilePath) ? "Unsaved Project" : _currentProjectFilePath;
         private string _jsonPreview = "{}";
@@ -470,6 +471,7 @@ namespace Test_Automation
                 RefreshComponentPreview();
                 RefreshDatasetPreview();
                 RefreshAssertionJsonTreePanel();
+                RefreshAccessibleVariableKeys();
             }
         }
 
@@ -686,6 +688,7 @@ namespace Test_Automation
         }
 
         public ObservableCollection<string> VariableKeyOptions => _variableKeyOptions;
+        public ObservableCollection<string> AccessibleVariableKeys => _accessibleVariableKeys;
 
         public string ProjectDescription
         {
@@ -8870,6 +8873,7 @@ Tips:
             _variableUsageMap = map;
             VariableUsageVersion++;
             RefreshVariableKeyOptions();
+            RefreshAccessibleVariableKeys();
         }
 
         private void RefreshVariableKeyOptions()
@@ -8879,6 +8883,33 @@ Tips:
             foreach (var key in _variableUsageMap.Keys.OrderBy(k => k))
             {
                 _variableKeyOptions.Add(key);
+            }
+        }
+
+        private void RefreshAccessibleVariableKeys()
+        {
+            _accessibleVariableKeys.Clear();
+            _accessibleVariableKeys.Add(string.Empty);
+            
+            if (SelectedNode == null) return;
+            
+            var node = SelectedNode;
+            var variableKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            
+            // Collect variables from the selected node's parent chain
+            while (node != null)
+            {
+                foreach (var variable in node.Variables)
+                {
+                    if (!string.IsNullOrWhiteSpace(variable.Key))
+                        variableKeys.Add(variable.Key);
+                }
+                node = node.Parent;
+            }
+            
+            foreach (var key in variableKeys.OrderBy(k => k))
+            {
+                _accessibleVariableKeys.Add(key);
             }
         }
 
