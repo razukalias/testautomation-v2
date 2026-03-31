@@ -5664,8 +5664,12 @@ Tips:
         private void PlanTreeView_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             _dragStartPoint = e.GetPosition(null);
-            var item = FindParentTreeViewItem(e.OriginalSource as DependencyObject);
-            _draggedNode = item?.DataContext as PlanNode;
+            _draggedNode = null;
+            if (IsClickOnDragHandle(e))
+            {
+                var item = FindParentTreeViewItem(e.OriginalSource as DependencyObject);
+                _draggedNode = item?.DataContext as PlanNode;
+            }
         }
 
         private void PlanTreeView_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -5988,6 +5992,48 @@ Tips:
                 child = VisualTreeHelper.GetParent(child);
             }
 
+            return null;
+        }
+
+        private bool IsClickOnDragHandle(MouseButtonEventArgs e)
+        {
+            var treeViewItem = FindParentTreeViewItem(e.OriginalSource as DependencyObject);
+            if (treeViewItem == null)
+                return false;
+
+            var dragHandle = FindDragHandle(treeViewItem);
+            if (dragHandle == null)
+                return false;
+
+            // Check if the original source is the drag handle or its child
+            var source = e.OriginalSource as DependencyObject;
+            while (source != null && source != treeViewItem)
+            {
+                if (source == dragHandle)
+                    return true;
+                source = VisualTreeHelper.GetParent(source);
+            }
+            return false;
+        }
+
+        private static Border? FindDragHandle(TreeViewItem treeViewItem)
+        {
+            // Find the Border with name "DragHandle" in the visual tree
+            return FindChildByName(treeViewItem, "DragHandle") as Border;
+        }
+
+        private static DependencyObject? FindChildByName(DependencyObject parent, string name)
+        {
+            int childCount = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < childCount; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is FrameworkElement fe && fe.Name == name)
+                    return child;
+                var result = FindChildByName(child, name);
+                if (result != null)
+                    return result;
+            }
             return null;
         }
 
