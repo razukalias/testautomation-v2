@@ -2059,6 +2059,12 @@ namespace Test_Automation
             set => SetSettingValue("Iterations", value);
         }
 
+        public string LoopIndexVariable
+        {
+            get => GetSettingValue("IndexVariable", string.Empty);
+            set => SetSettingValue("IndexVariable", value);
+        }
+
         public string ForeachSourceVariable
         {
             get => GetSettingValue("SourceVariable", string.Empty);
@@ -2069,6 +2075,12 @@ namespace Test_Automation
         {
             get => GetSettingValue("OutputVariable", string.Empty);
             set => SetSettingValue("OutputVariable", value);
+        }
+
+        public string ForeachIndexVariable
+        {
+            get => GetSettingValue("IndexVariable", string.Empty);
+            set => SetSettingValue("IndexVariable", value);
         }
 
         public string IfCondition
@@ -2093,6 +2105,12 @@ namespace Test_Automation
         {
             get => GetSettingValue("EvaluationMode", "While");
             set => SetSettingValue("EvaluationMode", value);
+        }
+
+        public string WhileIndexVariable
+        {
+            get => GetSettingValue("IndexVariable", string.Empty);
+            set => SetSettingValue("IndexVariable", value);
         }
 
         public string WhileConditionJson
@@ -2151,6 +2169,12 @@ namespace Test_Automation
         {
             get => GetSettingValue("Code", string.Empty);
             set => SetSettingValue("Code", value);
+        }
+
+        public string ScriptOutputVariable
+        {
+            get => GetSettingValue("OutputVariable", string.Empty);
+            set => SetSettingValue("OutputVariable", value);
         }
 
         #region RandomGenerator Properties

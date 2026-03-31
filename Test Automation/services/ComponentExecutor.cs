@@ -257,6 +257,7 @@ namespace Test_Automation.Services
             {
                 iterations = parsed;
             }
+            var indexVariable = loop.Settings.TryGetValue("IndexVariable", out var index) ? index?.Trim() : string.Empty;
 
             var loopData = result.Data as LoopData;
             if (loopData != null)
@@ -268,7 +269,10 @@ namespace Test_Automation.Services
             {
                 TraceLog(loop, result, $"[ComponentExecutor] Starting loop iteration {i+1} of {iterations}", TraceLevel.Verbose);
                 ThrowIfStopped(context, $"{loop.Name} iteration {i}");
-                context.SetVariable("loop_index", i);
+                if (!string.IsNullOrWhiteSpace(indexVariable))
+                {
+                    context.SetVariable(indexVariable, i);
+                }
 
                 if (loopData != null)
                 {
@@ -354,8 +358,9 @@ namespace Test_Automation.Services
 
             var sourceVariable = foreachComponent.Settings.TryGetValue("SourceVariable", out var source) ? source : string.Empty;
             var outputVariable = foreachComponent.Settings.TryGetValue("OutputVariable", out var output) ? output?.Trim() : string.Empty;
+            var indexVariable = foreachComponent.Settings.TryGetValue("IndexVariable", out var index) ? index?.Trim() : string.Empty;
             
-            TraceLog(foreachComponent, result, $"Foreach '{foreachComponent.Name}': SourceVariable='{sourceVariable}', OutputVariable='{outputVariable}'");
+            TraceLog(foreachComponent, result, $"Foreach '{foreachComponent.Name}': SourceVariable='{sourceVariable}', OutputVariable='{outputVariable}', IndexVariable='{indexVariable}'");
             
             // Check if the variable exists
             var variableValue = context.GetVariable(sourceVariable);
@@ -378,11 +383,13 @@ namespace Test_Automation.Services
             {
                 ThrowIfStopped(context, $"{foreachComponent.Name} iteration {i}");
 
-                context.SetVariable("CurrentItem", items[i]);
-                context.SetVariable("CurrentIndex", i);
                 if (!string.IsNullOrWhiteSpace(outputVariable))
                 {
                     context.SetVariable(outputVariable, items[i]);
+                }
+                if (!string.IsNullOrWhiteSpace(indexVariable))
+                {
+                    context.SetVariable(indexVariable, i);
                 }
 
                 if (foreachData != null)

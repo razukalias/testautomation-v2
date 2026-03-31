@@ -23,6 +23,7 @@ namespace Test_Automation.Componentes
             var code = Settings.TryGetValue("Code", out var configuredCode)
                 ? configuredCode
                 : string.Empty;
+            var outputVariable = Settings.TryGetValue("OutputVariable", out var configuredOutput) ? configuredOutput?.Trim() : string.Empty;
 
             var data = new ScriptData
             {
@@ -41,7 +42,10 @@ namespace Test_Automation.Componentes
             var resultText = outcome.Result?.ToString() ?? string.Empty;
             data.ExecutionResult = resultText;
             data.Properties["result"] = outcome.Result ?? string.Empty;
-            context.SetVariable("lastScriptResult", resultText);
+            if (!string.IsNullOrWhiteSpace(outputVariable))
+            {
+                context.SetVariable(outputVariable, resultText);
+            }
             return data;
         }
     }

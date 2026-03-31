@@ -33,6 +33,7 @@ namespace Test_Automation.Componentes
                 timeoutMs = parsedTimeout;
             var evaluationMode = Settings.TryGetValue("EvaluationMode", out var mode) ? mode : "While";
             var isDoWhile = string.Equals(evaluationMode, "DoWhile", StringComparison.OrdinalIgnoreCase);
+            var indexVariable = Settings.TryGetValue("IndexVariable", out var index) ? index?.Trim() : string.Empty;
 
             List<ConditionRow> conditionRows;
             try
@@ -143,6 +144,10 @@ namespace Test_Automation.Componentes
                 }
 
                 // Execute child components (if any)
+                if (!string.IsNullOrWhiteSpace(indexVariable))
+                {
+                    context.SetVariable(indexVariable, iteration);
+                }
                 foreach (var child in Children)
                 {
                     // TODO: Execute child component with context

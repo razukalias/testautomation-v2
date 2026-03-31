@@ -245,10 +245,12 @@ namespace Test_Automation.Models.Editor
             else if (type == "Loop")
             {
                 Settings.Add(new NodeSetting("Iterations", "1"));
+                Settings.Add(new NodeSetting("IndexVariable", ""));
             }
             else if (type == "Foreach")
             {
                 Settings.Add(new NodeSetting("SourceVariable", "items"));
+                Settings.Add(new NodeSetting("IndexVariable", ""));
             }
             else if (type == "If")
             {
@@ -260,6 +262,7 @@ namespace Test_Automation.Models.Editor
                 Settings.Add(new NodeSetting("MaxIterations", "1000"));
                 Settings.Add(new NodeSetting("TimeoutMs", "0"));
                 Settings.Add(new NodeSetting("EvaluationMode", "While"));
+                Settings.Add(new NodeSetting("IndexVariable", ""));
             }
             else if (type == "Threads")
             {
@@ -280,6 +283,7 @@ namespace Test_Automation.Models.Editor
             {
                 Settings.Add(new NodeSetting("Language", "CSharp"));
                 Settings.Add(new NodeSetting("Code", ""));
+                Settings.Add(new NodeSetting("OutputVariable", ""));
             }
             else if (type == "Config")
             {
