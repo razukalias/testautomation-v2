@@ -8933,7 +8933,8 @@ Tips:
             
             foreach (var key in variableKeys.OrderBy(k => k))
             {
-                _accessibleVariableKeys.Add(key);
+                if (!_accessibleVariableKeys.Contains(key))
+                    _accessibleVariableKeys.Add(key);
             }
         }
 

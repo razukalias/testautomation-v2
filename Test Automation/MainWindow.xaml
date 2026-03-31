@@ -690,9 +690,10 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Response Body" />
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding AccessibleVariableKeys}"
-                                          SelectedItem="{Binding GraphQLResponseBodyVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding GraphQLResponseBodyVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
-                                          IsReadOnly="False" />
+                                          IsReadOnly="False"
+                                          IsTextSearchEnabled="True" />
                             </Grid>
                             <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
@@ -702,9 +703,10 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Status Code" />
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding AccessibleVariableKeys}"
-                                          SelectedItem="{Binding GraphQLResponseStatusCodeVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding GraphQLResponseStatusCodeVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
-                                          IsReadOnly="False" />
+                                          IsReadOnly="False"
+                                          IsTextSearchEnabled="True" />
                             </Grid>
                             <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
@@ -714,9 +716,10 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Duration" />
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding AccessibleVariableKeys}"
-                                          SelectedItem="{Binding GraphQLResponseDurationVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding GraphQLResponseDurationVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
-                                          IsReadOnly="False" />
+                                          IsReadOnly="False"
+                                          IsTextSearchEnabled="True" />
                             </Grid>
 
                         </StackPanel>
@@ -1433,8 +1436,9 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output Variable" />
                                 <ComboBox Grid.Column="1" 
                                           ItemsSource="{Binding AvailableVariablesForExtractor}"
-                                          SelectedItem="{Binding FileOutputVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding FileOutputVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
+                                          IsTextSearchEnabled="True"
                                           ToolTip="Variable name to store result"
                                           Margin="0,0,6,0" />
                                 <TextBlock Grid.Column="2" VerticalAlignment="Center" >
@@ -1517,9 +1521,10 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Index Variable" />
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding AccessibleVariableKeys}"
-                                          SelectedItem="{Binding LoopIndexVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding LoopIndexVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           IsReadOnly="False"
+                                          IsTextSearchEnabled="True"
                                           ToolTip="Optional variable name that stores the current loop iteration index" />
                             </Grid>
                             
@@ -1569,9 +1574,10 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Index Variable" />
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding AccessibleVariableKeys}"
-                                          SelectedItem="{Binding ForeachIndexVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding ForeachIndexVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           IsReadOnly="False"
+                                          IsTextSearchEnabled="True"
                                           ToolTip="Optional variable name that stores the current iteration index" />
                             </Grid>
                             
@@ -1736,9 +1742,10 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output Variable" />
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding AccessibleVariableKeys}"
-                                          SelectedItem="{Binding ScriptOutputVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding ScriptOutputVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           IsReadOnly="False"
+                                          IsTextSearchEnabled="True"
                                           ToolTip="Optional variable name that stores the script result" />
                             </Grid>
                         </StackPanel>
@@ -1992,9 +1999,10 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Variable Name" />
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding AccessibleVariableKeys}"
-                                          SelectedItem="{Binding RandomVariableName, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding RandomVariableName, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           IsReadOnly="False"
+                                          IsTextSearchEnabled="True"
                                           ToolTip="Optional: Store result in this variable" />
                             </Grid>
                         </StackPanel>
@@ -2080,9 +2088,10 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output Variable" />
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding AccessibleVariableKeys}"
-                                          SelectedItem="{Binding Base64OutputVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding Base64OutputVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           IsReadOnly="False"
+                                          IsTextSearchEnabled="True"
                                           ToolTip="Optional: Store result in this variable" />
                             </Grid>
                             
@@ -2129,9 +2138,10 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Index Variable" />
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding AccessibleVariableKeys}"
-                                          SelectedItem="{Binding WhileIndexVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding WhileIndexVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           IsReadOnly="False"
+                                          IsTextSearchEnabled="True"
                                           ToolTip="Optional variable name that stores the current iteration index" />
                             </Grid>
                             <TextBlock Text="Condition Rows" FontWeight="SemiBold" Margin="0,0,0,6" />
