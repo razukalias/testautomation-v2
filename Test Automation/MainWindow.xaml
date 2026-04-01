@@ -690,7 +690,7 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Response Body" />
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding AccessibleVariableKeys}"
-                                          Text="{Binding GraphQLResponseBodyVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding HttpResponseBodyVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           IsReadOnly="False"
                                           IsTextSearchEnabled="True" />
@@ -703,7 +703,7 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Status Code" />
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding AccessibleVariableKeys}"
-                                          Text="{Binding GraphQLResponseStatusCodeVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding HttpResponseStatusCodeVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           IsReadOnly="False"
                                           IsTextSearchEnabled="True" />
@@ -716,7 +716,7 @@
                                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Duration" />
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding AccessibleVariableKeys}"
-                                          Text="{Binding GraphQLResponseDurationVariable, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding HttpResponseDurationVariable, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           IsReadOnly="False"
                                           IsTextSearchEnabled="True" />
