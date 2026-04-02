@@ -4417,16 +4417,15 @@ namespace Test_Automation
         {
             get
             {
-                var variables = new ObservableCollection<string>();
+                var uniqueKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var projectNode = RootNodes.FirstOrDefault(node => node.Type == "Project");
                 if (projectNode != null)
                 {
                     foreach (var v in projectNode.Variables)
                     {
-                        if (!string.IsNullOrWhiteSpace(v.Key) && !variables.Contains(v.Key))
-                        {
-                            variables.Add(v.Key);
-                        }
+                        var trimmedKey = v.Key?.Trim();
+                        if (!string.IsNullOrWhiteSpace(trimmedKey))
+                            uniqueKeys.Add(trimmedKey);
                     }
                 }
 
@@ -4439,14 +4438,18 @@ namespace Test_Automation
                     {
                         foreach (var v in testPlanNode.Variables)
                         {
-                            if (!string.IsNullOrWhiteSpace(v.Key) && !variables.Contains(v.Key))
-                            {
-                                variables.Add(v.Key);
-                            }
+                            var trimmedKey = v.Key?.Trim();
+                            if (!string.IsNullOrWhiteSpace(trimmedKey))
+                                uniqueKeys.Add(trimmedKey);
                         }
                     }
                 }
 
+                var variables = new ObservableCollection<string>();
+                foreach (var key in uniqueKeys.OrderBy(k => k))
+                {
+                    variables.Add(key);
+                }
                 return variables;
             }
         }
@@ -8925,8 +8928,9 @@ Tips:
             {
                 foreach (var variable in node.Variables)
                 {
-                    if (!string.IsNullOrWhiteSpace(variable.Key))
-                        variableKeys.Add(variable.Key);
+                    var trimmedKey = variable.Key?.Trim();
+                    if (!string.IsNullOrWhiteSpace(trimmedKey))
+                        variableKeys.Add(trimmedKey);
                 }
                 node = node.Parent;
             }
