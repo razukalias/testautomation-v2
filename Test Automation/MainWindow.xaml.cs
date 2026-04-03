@@ -9816,7 +9816,10 @@ Tips:
             OnPropertyChanged(nameof(IsDatasetXml));
             OnPropertyChanged(nameof(TimerDelayMs));
             OnPropertyChanged(nameof(LoopIterations));
+            OnPropertyChanged(nameof(LoopIndexVariable));
             OnPropertyChanged(nameof(ForeachSourceVariable));
+            OnPropertyChanged(nameof(ForeachOutputVariable));
+            OnPropertyChanged(nameof(ForeachIndexVariable));
             OnPropertyChanged(nameof(ForeachOutputVariable));
             OnPropertyChanged(nameof(IfCondition));
             OnPropertyChanged(nameof(ThreadCount));
@@ -9923,6 +9926,7 @@ Tips:
             OnPropertyChanged(nameof(WhileTimeoutMs));
             OnPropertyChanged(nameof(WhileEvaluationMode));
             OnPropertyChanged(nameof(WhileConditionJson));
+            OnPropertyChanged(nameof(WhileIndexVariable));
             OnPropertyChanged(nameof(WhileEvaluationModeOptions));
             if (SelectedNode?.Type == "While")
             {
